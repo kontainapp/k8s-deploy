@@ -14,11 +14,8 @@
 # limitations under the License.
 #
 TOP := $(shell git rev-parse --show-toplevel)
+SHELL=/bin/bash
 
-release:
+tag-release:
 	git tag ${TAG}
 	git push origin ${TAG}
-	gh auth login --with-token < ${TOKEN}
-	gh release create ${TAG}
-	git tag -f current
-	git push -f origin current

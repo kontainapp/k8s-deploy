@@ -118,17 +118,15 @@ if [ -n "$location" ]; then
     location=${location}/overlays/${overlay}
 else 
     if [ -z  "$tag" ]; then
-        tags=$(curl -L https://api.github.com/repos/kontainapp/km/tags | jq  -r '(.[] |select(.name == "current") |.commit|.sha) as $sha | .[] | select(.commit.sha == $sha) | select(.name != "current")|.name')
+        tags=$(curl -L https://api.github.com/repos/kontainapp/k8s-deploy/tags | jq  -r '(.[] |select(.name == "current") |.commit|.sha) as $sha | .[] | select(.commit.sha == $sha) | select(.name != "current")|.name')
 
         for tag in $tags
         do
-            rel=$(curl -L https://api.github.com/repos/kontainapp/km/releases/tags/"${tag}" |jq -r '.id')
+            rel=$(curl -L https://api.github.com/repos/kontainapp/k8s-deploy/releases/tags/"${tag}" |jq -r 'select(.author.login == "github-actions[bot]") | .id')
             if [ "$rel" != "null" ]; then 
                 break
             fi
         done    
-        # find real release in case tehre multiple tags on release sha 
-
     fi
     
     artifact="https://github.com/kontainapp/k8s-deploy/archive/refs/tags/"${tag}".tar.gz"
