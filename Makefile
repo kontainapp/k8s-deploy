@@ -19,6 +19,6 @@ release:
 	git tag ${TAG}
 	git push origin ${TAG}
 	gh auth login --with-token < ${TOKEN}
-	gh release create v1.2.3 ${TAG}
+	gh release create ${TAG}
 	git tag -f current
 	git push -f origin current

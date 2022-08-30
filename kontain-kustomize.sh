@@ -114,19 +114,28 @@ else
     exit 1
 fi
 
-
-if [ -z  "$tag" ]; then
-    tag=$(curl -L -s https://raw.githubusercontent.com/kontainapp/km/current/km-releases/current_release.txt)
-fi
-
 if [ -n "$location" ]; then
     location=${location}/overlays/${overlay}
 else 
-    location="https://github.com/kontainapp/km/cloud/k8s/deploy/kontain-deploy/overlays/${overlay}?ref=${tag}"
-fi
+    if [ -z  "$tag" ]; then
+        tags=$(curl -L https://api.github.com/repos/kontainapp/km/tags | jq  -r '(.[] |select(.name == "current") |.commit|.sha) as $sha | .[] | select(.commit.sha == $sha) | select(.name != "current")|.name')
 
-echo "TAG = $tag"
-echo "LOCATION = $location"
+        for tag in $tags
+        do
+            rel=$(curl -L https://api.github.com/repos/kontainapp/km/releases/tags/"${tag}" |jq -r '.id')
+            if [ "$rel" != "null" ]; then 
+                break
+            fi
+        done    
+        # find real release in case tehre multiple tags on release sha 
+
+    fi
+    
+    artifact="https://github.com/kontainapp/k8s-deploy/archive/refs/tags/"${tag}".tar.gz"
+    mkdir -p kontain-deploy
+    curl -L artifact | tar -xz ./kontain-deploy
+    location=./kontain-deploy/overlays/${overlay}
+fi
 
 kubectl kustomize "$location" > ${kontain_yaml}
 
