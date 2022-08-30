@@ -17,5 +17,5 @@ TOP := $(shell git rev-parse --show-toplevel)
 SHELL=/bin/bash
 
 tag-release:
-	git tag ${TAG}
-	git push origin ${TAG}
+	git tag -f ${TAG}
+	git push -f origin ${TAG}
