@@ -18,17 +18,19 @@ chmod +x kontain-kustomize.sh
 2. Run script to use latest version of deployment 
 
 ```
-./kontain-kustomize.sh 
+./kontain-kustomize.sh [release-tag | location] [--dry-run=<strategy>] [--config=<path to properties file>]
 ```
 
 ### Script options
 |Option| Usage|
-|---|---|
+|----------------------------------|---|
 |--release-tag=\<tag> | Kontain release tag to use. Be default uses current release 
 |--location=\<deployment location> | location of kontain-deploy directory 
-|--help\(-h) | prints help information"
+|--help\(-h) | prints help information
 |--dry-run=<strategy>" |If 'review' strategy, only generate resulting customization file. If 'client' strategy, only print the object that would be sent, without sending it. If 'server' strategy, submit server-side request without persisting the resource.
-
+|--config=<path to properties file>| path properties file to overwrite special settings in kontain deployment. Currently supported settings are:
+    -TAG - release tag to use to install kontain binaries. By default uses current release
+    -KONTAIN_RELEASE_URL = url to download kontain_bin.tar.gz. Development only
 > **Note**
 > Either --release-tag or --location maybe specified but not both. 
 

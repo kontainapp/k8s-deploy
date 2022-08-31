@@ -31,6 +31,9 @@ print_help() {
     echo "         If no parametes are specifies, current release will be used"
     echo "Additional options"
     echo "  --help(-h) - prints this message"
+    echo "  --config=<file> - path properties file to overwrite special settings in kontain deployment. Currently supported settings are:"
+    echo "          TAG - release tag to use to install kontain binaries. By default uses current release"
+    echo "          KONTAIN_RELEASE_URL = url to download kontain_bin.tar.gz. Development only"
     echo "  --dry-run=<strategy>" If 'review' strategy, only generate resulting customization file. If 'client' strategy, only print the object that would be sent, without
 	sending it. If 'server' strategy, submit server-side request without persisting the resource.
     exit 1
@@ -50,6 +53,9 @@ do
         ;;
         --dry-run=*)
             strategy="${1#*=}"
+        ;;
+        --config=*)
+            config="${1#*=}"
         ;;
         --help | -h)
             print_help
@@ -127,7 +133,17 @@ else
     location=./kontain-deploy/overlays/"${overlay}"
 fi
 
+if [ -n "$config" ]; then
+    # overwrite environment file
+    cp --backup "$config" "${location}"/../../base/config.properties
+fi
+
 kubectl kustomize "$location" > "${kontain_yaml}"
+
+if [ -n "$config" ]; then
+    # restore original environment file
+    mv "${location}"/../../base/config.properties~ "${location}"/../../base/config.properties
+fi
 
 if [ "$strategy" = "review" ]; then 
     exit

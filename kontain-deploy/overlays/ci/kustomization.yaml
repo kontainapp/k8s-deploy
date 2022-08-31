@@ -16,6 +16,3 @@ kind: Kustomization
 
 bases:
   - ../../base
-
-patchesStrategicMerge:
-  - set_ci_env.yaml

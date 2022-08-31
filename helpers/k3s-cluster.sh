@@ -34,14 +34,11 @@ main() {
     until systemctl is-active k3s; do echo -n "."; done
     echo ""
 
-    echo "waiting for k3s server to establish connection"
-    until netstat -nat | grep 644 | grep ESTABLISHED > /dev/null; do echo -n "."; done
-    echo ""
-
-    sleep 20
-
     export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
-    kubectl wait --for=condition=Ready pods --all -n kube-system
+
+    echo "waiting for cluster to become available"
+    until kubectl wait --for=condition=Ready pods --all -n kube-system &> /dev/null; do echo -n "."; done
+    echo ""
 
 }
 
@@ -51,8 +48,14 @@ do_cleanup() {
 
     /usr/local/bin/k3s-uninstall.sh
 
-    echo "waiting for all precesses to terminate and sockets to free"
-    until ! netstat -nat |grep 644|grep TIME_WAIT > /dev/null; do echo -n "."; done
+    # in Lunux TIME_WAIT is hardcoded to 60 sec, so just wait for that period of time
+    echo "waiting for sockets to clear out"
+    # loop is implemented so user has some feedback
+    for i in `seq 1 60`;
+    do
+        echo -n "."
+        sleep 1
+    done
     echo ""
 }
 

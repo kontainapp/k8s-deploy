@@ -36,8 +36,8 @@ print_help() {
 }
 
 main() {
-
-	az login --service-principal -u "${app_id}" -p "${pwd}" --tenant "${tenant_id}" -o table
+    
+    az login --service-principal -u "${app_id}" -p "${pwd}" --tenant "${tenant_id}" -o table
 
     az group create --name "${resource_group_name}" --location "$region"
     # To access the nodes at the address created by `--enable-node-public-ip` need to open ssh port on the corresponding sg
@@ -97,22 +97,22 @@ do
 done
 
 if [ -z "$prefix" ]; then
-    echo "Prefix is equired "
+    echo "Prefix is required "
     exit 1
 fi
 
 if [ -z "$app_id" ]; then
-    echo "Application id is equired "
+    echo "Application id is required "
     exit 1
 fi
 
 if [ -z "$tenant_id" ]; then
-    echo "Tenant id is equired "
+    echo "Tenant id is required "
     exit 1
 fi
 
 if [ -z "$pwd" ]; then
-    echo "password (secret) is equired "
+    echo "password (secret) is required "
     exit 1
 fi
 
