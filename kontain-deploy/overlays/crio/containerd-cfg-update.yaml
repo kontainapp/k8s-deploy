@@ -1,7 +1,4 @@
---- # ---
-# Copyright 2021 Kontain
-# Derived from:
-# Copyright 2019 Google LLC
+# Copyright 2022 Kontain
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -29,8 +26,8 @@ data:
     [ -z ${CONTAINERD_CFG_FULL_PATH} ] && echo "must be called after containerd-cfg-get" && exit 1
 
     if grep -q "\[crio.runtime.runtimes.krun\]" ${CONTAINERD_CFG_FULL_PATH}; then
-        echo "Configuration exists for krun, overwriting"
-        sed -i "/\[crio.runtime.runtimes.krun\]/,+1s#runtime_type.*#runtime_type = \"oci\"#" ${CONTAINERD_CFG_FULL_PATH}
+      echo "Configuration exists for krun, overwriting"
+      sed -i "/\[crio.runtime.runtimes.krun\]/,+1s#runtime_type.*#runtime_type = \"oci\"#" ${CONTAINERD_CFG_FULL_PATH}
     else
       echo "[crio.runtime.runtimes.krun]" | tee -a ${CONTAINERD_CFG_FULL_PATH}
       echo "runtime_path = \"/opt/kontain/bin/krun\"" | tee -a ${CONTAINERD_CFG_FULL_PATH}

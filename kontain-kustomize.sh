@@ -1,8 +1,6 @@
 #!/bin/bash
 
 # Copyright 2022 Kontain
-# Derived from:
-# Copyright 2019 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,8 +15,6 @@
 # limitations under the License.
 
 [ "$TRACE" ] && set -x
-
-set -x
 
 tag=""
 location=""
@@ -41,7 +37,7 @@ print_help() {
 }
 
 kontain_yaml=kontain-deploy.yaml
-strategy=none
+strategy="none"
 
 for arg in "$@"
 do
@@ -81,36 +77,31 @@ runtime=$(kubectl get node -ojson | jq -r '.items[0] | .status | .nodeInfo | .co
 post_process=""
 
 if [ "$cloud_provider" = "azure" ]; then
-    echo "on Azure"
     overlay=containerd
 elif [ "$cloud_provider" = "aws" ]; then
-    echo "on Amazon"
     overlay=amazon-eks-custom
 elif [ "$cloud_provider" = "gce" ]; then
     if [[ $os =~ Ubuntu* ]]; then 
-        echo "on GKE Ubuntu"
         overlay=containerd
     elif [[ $os =~ Google ]]; then 
-        echo "On Container-Optimized OS from Google"
-        overlay=gke-gvisor
+        echo "Container-Optimized OS from Google is unsupported"
+        exit
     fi
 elif [ "$cloud_provider" = "k3s" ]; then
-    echo "On K3s"
     overlay=k3s
     post_process="sudo systemctl restart k3s"
 elif [ "$cloud_provider" = "minikube" ]; then
-    echo "On minikube"
     if [[ $runtime =~ crio* ]]; then 
         overlay=crio
     elif [[ $runtime =~ containerd ]]; then 
         overlay=containerd
     else
-        echo "Unsuported runtime"
+        echo "Unsupported runtime"
     fi
 else
-    echo "If you are runnign K3s make sure change kubectl config by runnig the followinf command:"
-    echo "  export KUBECONFIG=/etc/rancher/k3s/k3s.yaml"
-    echo "If not, you are running Kontain-unsuported cluster provider"
+    echo "Unrecognized cluster provider $cloud_provider."
+    echo ""
+    echo "If you running K3s make sure to set export KUBECONFIG=/etc/rancher/k3s/k3s.yaml"
     exit 1
 fi
 
@@ -118,11 +109,13 @@ if [ -n "$location" ]; then
     location=${location}/overlays/${overlay}
 else 
     if [ -z  "$tag" ]; then
-        tags=$(curl -sL https://api.github.com/repos/kontainapp/k8s-deploy/tags | jq  -r '(.[] |select(.name == "current") |.commit|.sha) as $sha | .[] | select(.commit.sha == $sha) | select(.name != "current")|.name')
+        tags=$(curl -sL https://api.github.com/repos/kontainapp/k8s-deploy/tags | \
+            jq  -r '(.[] |select(.name == "current") |.commit|.sha) as $sha | .[] | select(.commit.sha == $sha) | select(.name != "current")|.name')
 
         for tag in $tags
         do
-            rel=$(curl -sL https://api.github.com/repos/kontainapp/k8s-deploy/releases/tags/"${tag}" |jq -r 'select(.author.login == "github-actions[bot]") | .id')
+            rel=$(curl -sL https://api.github.com/repos/kontainapp/k8s-deploy/releases/tags/"${tag}" | \
+                jq -r 'select(.author.login == "github-actions[bot]") | .id')
             if [ "$rel" != "null" ]; then 
                 break
             fi
@@ -142,10 +135,13 @@ fi
 
 kubectl apply --dry-run="$strategy" -f "${kontain_yaml}"
 
-pod=$(kubectl get pods -A -ojson | jq -r '.items[] | .metadata | .name |select(. | startswith("kontain") )')
-echo "waiting for kontain deamonset to be running"
-kubectl wait --for=condition=Ready pod/"$pod" -n kube-system
+if [ "$strategy" == "none" ]; then 
+    pod=$(kubectl get pods -A -ojson | jq -r '.items[] | .metadata | .name |select(. | startswith("kontain") )')
 
-echo "Running post deployment"
-${post_process}
+    echo "waiting for kontain deamonset to be running"
+    kubectl wait --for=condition=Ready pod/"$pod" -n kube-system
+
+    echo "Running post deployment"
+    ${post_process}
+fi
 rm "${kontain_yaml}"

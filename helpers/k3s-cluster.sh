@@ -1,6 +1,6 @@
-# Copyright 2021 Kontain
-# Derived from:
-# Copyright 2019 Google LLC
+#!/bin/bash
+
+# Copyright 2022 Kontain
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,30 +14,30 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-#!/bin/bash
-
 [ "$TRACE" ] && set -x
 
 print_help() {
-    echo "usage: $0  [options] prefix"
+    echo "usage: $0 [options] prefix"
     echo "Creates k3s cluster"
     echo ""
     echo "-h,--help print this help"
-    echo "--cleanup Instructs script to delete cluster and all related resourses. "
-    echo "--config print command to set KUBECONFIG environment variable. "
-    echo "  Use   source  <(./helpers/k3s-cluster.sh --config ez-test) to set enironment variable" 
+    echo "--cleanup Instructs script to delete cluster and all related resourses."
+    echo "--config print command to set KUBECONFIG environment variable."
+    echo "  Use   source  <(./helpers/k3s-cluster.sh --config ez-test) to set enironment variable." 
     exit 0
 }
 main() {
     
     curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="--no-deploy traefik --disable servicelb" INSTALL_K3S_VERSION="v1.24.3+k3s1" sh -s - --write-kubeconfig-mode 666
 
-    echo waiting for k3s to become active
+    echo "waiting for k3s to become active"
     until systemctl is-active k3s; do echo -n "."; done
+    echo ""
 
-    echo waiting for k3s server to establish connection
-    until netstat -nat |grep 644|grep ESTABLISHED > /dev/null; do echo -n ".";done
-    
+    echo "waiting for k3s server to establish connection"
+    until netstat -nat | grep 644 | grep ESTABLISHED > /dev/null; do echo -n "."; done
+    echo ""
+
     sleep 20
 
     export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
@@ -47,15 +47,13 @@ main() {
 
 do_cleanup() {
 
-    # sudo systemctl stop k3s-agent.service
     sudo systemctl stop k3s.service
 
-    # /usr/local/bin/k3s-agent-uninstall.sh
     /usr/local/bin/k3s-uninstall.sh
 
     echo "waiting for all precesses to terminate and sockets to free"
-    until ! netstat -nat |grep 644|grep TIME_WAIT > /dev/null; do echo -n "";done
-
+    until ! netstat -nat |grep 644|grep TIME_WAIT > /dev/null; do echo -n "."; done
+    echo ""
 }
 
 arg_count=$#
@@ -72,7 +70,7 @@ do
             echo "export KUBECONFIG=/etc/rancher/k3s/k3s.yaml"
             do_exit=true
         ;;
-        -* | --*)
+        --* | -*)
             echo "unknown option ${1}"
             print_help
         ;; 
@@ -80,9 +78,9 @@ do
     shift
 done
 
-if [ ! -z $cleanup ] && [ ! do_exit ] && [ $arg_count == 1 ]; then
+if [ -n "$cleanup" ] && [ ! $do_exit ] && [ $arg_count == 1 ]; then
     do_cleanup
     exit
 fi
 
-[[ ! do_exit ]] && main
+[[ ! $do_exit ]] && main

@@ -1,6 +1,4 @@
-# Copyright 2021 Kontain
-# Derived from:
-# Copyright 2019 Google LLC
+# Copyright 2022 Kontain
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -43,7 +41,9 @@ data:
 
       # check for kvm
       if [ -c ${ROOT_MOUNT_DIR}/dev/kvm ];then
-        chmod 666 ${ROOT_MOUNT_DIR}/dev/kvm
+        echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666"' > /tmp/rules
+        mv /tmp/rules /etc/udev/rules.d/99-perm.rules
+        udevadm control --reload-rules && sudo udevadm trigger
       else
         chmod +x ${TMP_MOUNT_DIR}/kontain-artifacts/kkm.run
         chroot ${ROOT_MOUNT_DIR} ${TMP_MOUNT_DIR}/kontain-artifacts/kkm.run -- --force-install

@@ -1,6 +1,6 @@
-# Copyright 2021 Kontain
-# Derived from:
-# Copyright 2019 Google LLC
+#!/bin/bash
+
+# Copyright 2022 Kontain
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,12 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-#!/bin/bash
-
 [ "$TRACE" ] && set -x
 
 region=us-west-1
-cleanup_only=''
 arg_count=$#
 
 print_help() {
@@ -42,20 +39,20 @@ main() {
 
 	az login --service-principal -u "${app_id}" -p "${pwd}" --tenant "${tenant_id}" -o table
 
-    az group create --name ${resource_group_name} --location westus3
+    az group create --name "${resource_group_name}" --location "$region"
     # To access the nodes at the address created by `--enable-node-public-ip` need to open ssh port on the corresponding sg
-    az aks create -g ${resource_group_name} -n ${cluster_name} --enable-managed-identity --node-count 1 --node-vm-size Standard_D4s_v5 --enable-node-public-ip
+    az aks create -g "${resource_group_name}" -n "${cluster_name}" --enable-managed-identity --node-count 1 --node-vm-size Standard_D4s_v5 --enable-node-public-ip
 
     # Configure kubectl
-    az aks get-credentials --resource-group ${resource_group_name} --name ${cluster_name} --overwrite-existing
+    az aks get-credentials --resource-group "${resource_group_name}" --name "${cluster_name}" --overwrite-existing
 }
 
 do_cleanup() {
     echo "deleting cluster"
     az login --service-principal -u "${app_id}" -p "${pwd}" --tenant "${tenant_id}" -o table
 
-    az aks delete --name ${cluster_name} --resource-group ${resource_group_name} --yes 
-    az group delete --name ${resource_group_name} --yes
+    az aks delete --name "${cluster_name}" --resource-group "${resource_group_name}" --yes 
+    az group delete --name "${resource_group_name}" --yes
 }
 
 for arg in "$@"
@@ -82,7 +79,7 @@ do
         --help | -h)
             print_help
         ;;
-        -* | --*)
+        --* | -*)
             echo "unknown option ${1}"
             print_help
         ;; 
@@ -99,30 +96,30 @@ do
     shift
 done
 
-if [ -z $prefix ];then
+if [ -z "$prefix" ]; then
     echo "Prefix is equired "
     exit 1
 fi
 
-if [ -z $app_id ];then
+if [ -z "$app_id" ]; then
     echo "Application id is equired "
     exit 1
 fi
 
-if [ -z $tenant_id ];then
+if [ -z "$tenant_id" ]; then
     echo "Tenant id is equired "
     exit 1
 fi
 
-if [ -z $pwd ];then
+if [ -z "$pwd" ]; then
     echo "password (secret) is equired "
     exit 1
 fi
 
-readonly resource_group_name=${prefix}-resource_group
-readonly cluster_name=${prefix}-cluster
+readonly resource_group_name="${prefix}"-resource_group
+readonly cluster_name="${prefix}"-cluster
 
-if [ ! -z $cleanup ] && [ $arg_count == 1 ]; then
+if [ -n "$cleanup" ] && [ $arg_count == 1 ]; then
     do_cleanup
     exit
 fi
@@ -130,7 +127,7 @@ fi
 main
 
 #clean at the end if requested
-if [ ! -z $cleanup ]; then 
+if [ -n "$cleanup" ]; then 
     do_cleanup
 fi
 

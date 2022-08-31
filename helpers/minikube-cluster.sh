@@ -1,6 +1,6 @@
+#!/bin/bash
+
 # Copyright 2022 Kontain
-# Derived from:
-# Copyright 2019 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,7 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-#!/bin/bash
 
 [ "$TRACE" ] && set -x
 export MINIKUBE_IN_STYLE=false
@@ -31,8 +30,8 @@ print_help() {
     echo "  minikube"
     echo "  kubectl"
     echo ""
-    echo "--driver docker, podman (default)"
-    echo "--runtime cri-o, containerd (default) "
+    echo "--driver docker | podman (default)"
+    echo "--runtime cri-o | containerd (default) "
     echo "-h,--help print this help"
     echo "--cleanup Instructs script to delete cluster and all related resourses "
     exit 0
@@ -53,7 +52,7 @@ do
         --help | -h)
             print_help
         ;;
-        -* | --*)
+        --* | -*)
             echo "unknown option ${1}"
             print_help
         ;; 
@@ -67,7 +66,7 @@ main() {
     if [ "$driver" = "docker" ]; then
         extra_options="--base-image=kicbase:latest --preload=false"
     fi
-    minikube start --container-runtime=$runtime --driver=$driver $extra_options --wait=all
+    minikube start --container-runtime="$runtime" --driver="$driver" "$extra_options" --wait=all
 }
 
 do_cleanup() {
@@ -75,7 +74,7 @@ do_cleanup() {
     minikube delete
 }
 
-if [ ! -z $cleanup ] && [ $arg_count == 1 ]; then
+if [ -n "$cleanup" ] && [ $arg_count == 1 ]; then
     do_cleanup
     exit
 fi
