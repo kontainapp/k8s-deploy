@@ -97,22 +97,22 @@ do
 done
 
 if [ -z "$prefix" ]; then
-    echo "Prefix is required "
+    echo "Prefix is required"
     exit 1
 fi
 
 if [ -z "$app_id" ]; then
-    echo "Application id is required "
+    echo "Application id is required"
     exit 1
 fi
 
 if [ -z "$tenant_id" ]; then
-    echo "Tenant id is required "
+    echo "Tenant id is required"
     exit 1
 fi
 
 if [ -z "$pwd" ]; then
-    echo "password (secret) is required "
+    echo "password (secret) is required"
     exit 1
 fi
 
