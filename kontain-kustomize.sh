@@ -118,35 +118,34 @@ if [ -n "$location" ]; then
     location=${location}/overlays/${overlay}
 else 
     if [ -z  "$tag" ]; then
-        tags=$(curl -L https://api.github.com/repos/kontainapp/k8s-deploy/tags | jq  -r '(.[] |select(.name == "current") |.commit|.sha) as $sha | .[] | select(.commit.sha == $sha) | select(.name != "current")|.name')
+        tags=$(curl -sL https://api.github.com/repos/kontainapp/k8s-deploy/tags | jq  -r '(.[] |select(.name == "current") |.commit|.sha) as $sha | .[] | select(.commit.sha == $sha) | select(.name != "current")|.name')
 
         for tag in $tags
         do
-            rel=$(curl -L https://api.github.com/repos/kontainapp/k8s-deploy/releases/tags/"${tag}" |jq -r 'select(.author.login == "github-actions[bot]") | .id')
+            rel=$(curl -sL https://api.github.com/repos/kontainapp/k8s-deploy/releases/tags/"${tag}" |jq -r 'select(.author.login == "github-actions[bot]") | .id')
             if [ "$rel" != "null" ]; then 
                 break
             fi
         done    
     fi
     
-    artifact="https://github.com/kontainapp/k8s-deploy/archive/refs/tags/"${tag}".tar.gz"
-    mkdir -p kontain-deploy
-    curl -L artifact | tar -xz ./kontain-deploy
-    location=./kontain-deploy/overlays/${overlay}
+    artifact="https://github.com/kontainapp/k8s-deploy/archive/refs/tags/${tag}.tar.gz"
+    curl -sL "$artifact" | tar -xz --strip-components=1
+    location=./kontain-deploy/overlays/"${overlay}"
 fi
 
-kubectl kustomize "$location" > ${kontain_yaml}
+kubectl kustomize "$location" > "${kontain_yaml}"
 
 if [ "$strategy" = "review" ]; then 
     exit
 fi
 
-kubectl apply --dry-run="$strategy" -f ${kontain_yaml}
+kubectl apply --dry-run="$strategy" -f "${kontain_yaml}"
 
 pod=$(kubectl get pods -A -ojson | jq -r '.items[] | .metadata | .name |select(. | startswith("kontain") )')
 echo "waiting for kontain deamonset to be running"
-kubectl wait --for=condition=Running pod/"$pod" -n kube-system
+kubectl wait --for=condition=Ready pod/"$pod" -n kube-system
 
-echo "Running postprocess"
+echo "Running post deployment"
 ${post_process}
-rm ${kontain_yaml}
+rm "${kontain_yaml}"
