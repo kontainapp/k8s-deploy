@@ -1,0 +1,36 @@
+# Copyright 2022 Kontain
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kontain-containerd-cfg-update
+  namespace: kube-system
+  labels:
+    app: kontain-init
+data:
+  containerd-cfg-update.sh: |-
+    #!/usr/bin/env bash
+
+    # must be called after containerd-cfg-get 
+    [ -z ${CONTAINERD_CFG_FULL_PATH} ] && echo "must be called after containerd-cfg-get" && exit 1
+
+    if grep -q "\[crio.runtime.runtimes.krun\]" ${CONTAINERD_CFG_FULL_PATH}; then
+      echo "Configuration exists for krun, overwriting"
+      sed -i "/\[crio.runtime.runtimes.krun\]/,+1s#runtime_type.*#runtime_type = \"oci\"#" ${CONTAINERD_CFG_FULL_PATH}
+    else
+      echo "[crio.runtime.runtimes.krun]" | tee -a ${CONTAINERD_CFG_FULL_PATH}
+      echo "runtime_path = \"/opt/kontain/bin/krun\"" | tee -a ${CONTAINERD_CFG_FULL_PATH}
+      echo "runtime_type = \"oci\"" | tee -a ${CONTAINERD_CFG_FULL_PATH}
+      echo "runtime_root = \"/run/krun\"" | tee -a ${CONTAINERD_CFG_FULL_PATH}
+    fi
