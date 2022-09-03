@@ -1,0 +1,14 @@
+name: Validate
+description: Deploy and Validate test app
+
+runs:
+  using: "composite"
+  steps:
+    - name: Deploy Test app and Verify install
+      run: |
+        kubectl apply -f ./tests/test.yaml
+        until kubectl get pod -l kontain=test-app &> /dev/null; do sleep 1; done 
+        pod=$(kubectl get pod -l kontain=test-app -o jsonpath="{.items[0].metadata.name}")
+        kubectl wait --for=condition=Ready pod/"$pod" -n kube-system
+        kubectl exec  $pod -- uname -r | egrep -q -e '.*\.kontain\.(KKM|KVM)$' && echo success|| exit 1
+      shell: bash

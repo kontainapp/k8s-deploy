@@ -30,8 +30,8 @@ print_help() {
     echo "  minikube"
     echo "  kubectl"
     echo ""
-    echo "--driver docker | podman (default)"
-    echo "--runtime cri-o | containerd (default) "
+    echo "--driver=<driver> docker | podman (default)"
+    echo "--runtime=<runtime>  cri-o | containerd (default) "
     echo "-h,--help print this help"
     echo "--cleanup Instructs script to delete cluster and all related resourses "
     exit 0

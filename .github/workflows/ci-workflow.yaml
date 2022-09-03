@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-name: KM CI Pipeline
+name: CI Pipeline
 on:
   pull_request:
     branches: [master]
@@ -51,16 +51,12 @@ jobs:
         run: |
           ./helpers/aks-cluster.sh --tenant=${SP_TENANT} --app-id=${SP_APPID} --password=${SP_PASSWORD} ci-deployment-test
 
-      - name: Deploy Overlays
-        run: |
-          ./kontain-kustomize.sh --deploy-location=./kontain-deploy
+      - uses: ./.github/actions/deploy-kontain
 
-      - name: Deploy Test app and Verify install
-        run: |
-          kubectl apply -f ./tests/test.yaml
-          kubectl exec $(kubectl get pod -l kontain=test-app -o jsonpath="{.items[0].metadata.name}") -- uname -r | egrep -q -e '.*\.kontain\.(KKM|KVM)$' && echo success|| exit 1
+      - uses: ./.github/actions/test-app
 
       - name: Clean cluster
+        if: ${{ always() }}
         run: |
           ./helpers/aks-cluster.sh --tenant=${SP_TENANT} --app-id=${SP_APPID} --password=${SP_PASSWORD} --cleanup ci-deployment-test
 
@@ -74,17 +70,15 @@ jobs:
       - name: Make cluster
         run: |
           ./helpers/k3s-cluster.sh
+          export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+          echo "::set-env name=KUBECONFIG::$KUBECONFIG"
 
-      - name: Deploy Overlays
-        run: |
-          ./kontain-kustomize.sh --deploy-location=./kontain-deploy
+      - uses: ./.github/actions/deploy-kontain
 
-      - name: Deploy Test app and Verify install
-        run: |
-          kubectl apply -f ./tests/test.yaml
-          kubectl exec $(kubectl get pod -l kontain=test-app -o jsonpath="{.items[0].metadata.name}") -- uname -r | egrep -q -e '.*\.kontain\.(KKM|KVM)$' && echo success|| exit 1
+      - uses: ./.github/actions/test-app
 
       - name: Cleanup cluster
+        if: ${{ always() }}
         run: |
           ./helpers/k3s-cluster.sh --cleanup
 
@@ -109,16 +103,12 @@ jobs:
         run: |
           ./helpers/minikube-cluster.sh --runtime=${{ matrix.runtime }} --driver=${{ matrix.driver }}
 
-      - name: Deploy Overlays
-        run: |
-          ./kontain-kustomize.sh --deploy-location=./kontain-deploy
+      - uses: ./.github/actions/deploy-kontain
 
-      - name: Deploy Test app and Verify install
-        run: |
-          kubectl apply -f ./tests/test.yaml
-          kubectl exec $(kubectl get pod -l kontain=test-app -o jsonpath="{.items[0].metadata.name}") -- uname -r | egrep -q -e '.*\.kontain\.(KKM|KVM)$' && echo success|| exit 1
+      - uses: ./.github/actions/test-app
 
       - name: Cleanup cluster
+        if: ${{ always() }}
         run: |
           ./helpers/minikube-cluster.sh --cleanup
 
@@ -138,15 +128,11 @@ jobs:
         run: |
           ./helpers/gce-cluster.sh --project=gke-suport ci-deployment-test
 
-      - name: Deploy Overlays
-        run: |
-          ./kontain-kustomize.sh --deploy-location=./kontain-deploy
+      - uses: ./.github/actions/deploy-kontain
 
-      - name: Deploy Test app and Verify install
-        run: |
-          kubectl apply -f ./tests/test.yaml
-          kubectl exec $(kubectl get pod -l kontain=test-app -o jsonpath="{.items[0].metadata.name}") -- uname -r | egrep -q -e '.*\.kontain\.(KKM|KVM)$' && echo success|| exit 1
+      - uses: ./.github/actions/test-app
 
       - name: Cleanup cluster
+        if: ${{ always() }}
         run: |
-          ./helpers/gce-cluster.sh --cleanup
+          ./helpers/gce-cluster.sh --cleanup ci-deployment-test

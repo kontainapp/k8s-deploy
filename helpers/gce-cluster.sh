@@ -82,8 +82,7 @@ readonly cluster_name="${prefix}"-cluster
 
 do_cleanup() {
     #Delete our GKE cluster
-    gcloud container clusters delete "${cluster_name}" --region="$region" 
-
+    gcloud container clusters delete --quiet "${cluster_name}" --region="$region" 
 }
 
 main() {

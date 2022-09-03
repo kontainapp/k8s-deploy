@@ -40,6 +40,10 @@ main() {
     until kubectl wait --for=condition=Ready pods --all -n kube-system &> /dev/null; do echo -n "."; done
     echo ""
 
+    echo "make sure to run "
+    echo "  export KUBECONFIG=/etc/rancher/k3s/k3s.yaml"
+    echo "to enable allow kubectl to work with your cluster"
+
 }
 
 do_cleanup() {

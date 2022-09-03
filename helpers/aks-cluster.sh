@@ -16,7 +16,7 @@
 
 [ "$TRACE" ] && set -x
 
-region=us-west-1
+region=westus3
 arg_count=$#
 
 print_help() {
