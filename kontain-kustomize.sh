@@ -80,7 +80,6 @@ function read_parameter(){
 function download_overlays() {
     tag=$1
 
-    echo "download dir = $download_dir"
     if [ -n "$download_dir" ]; then
         clean_dir=false
     else
@@ -180,11 +179,11 @@ do
         --help | -h)
             print_help
         ;;
-        --* | -*)
+        *)
             echo "unknown option ${1}"
             print_help
         ;; 
-        
+            
     esac
     shift
 done
@@ -224,7 +223,7 @@ elif [ "$cloud_provider" = "gce" ]; then
     fi
 elif [ "$cloud_provider" = "k3s" ]; then
     overlay=k3s
-    post_process="sudo systemctl restart k3s"
+    post_process="echo 'Make sure to restart k3s by using the following command\n\tsudo systemctl restart k3s'"
 elif [ "$cloud_provider" = "minikube" ]; then
     if [[ $runtime =~ crio* ]]; then 
         overlay=crio
@@ -256,7 +255,6 @@ if [ "$strategy" == "none" ]; then
     echo "waiting for kontain deamonset to be running"
     kubectl wait --for=condition=Ready pod/"$pod" -n kube-system
 
-    echo "Running post deployment"
-    ${post_process}
+    eval ${post_process}
 fi
 rm "${kontain_yaml}"

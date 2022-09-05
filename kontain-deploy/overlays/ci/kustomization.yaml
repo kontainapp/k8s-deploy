@@ -16,3 +16,10 @@ kind: Kustomization
 
 bases:
   - ../../base
+
+configMapGenerator:
+  - name: env-configmap
+    namespace: kube-system
+    behavior: merge
+    envs:
+      - config.properties

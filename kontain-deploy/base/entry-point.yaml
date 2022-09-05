@@ -20,11 +20,11 @@ metadata:
   labels:
     app: kontain-init
 data:
-  entrypoint.sh: |-
+  entrypoint.sh: |
     #!/usr/bin/env bash
 
     set -euo pipefail
-    
+
     # reading latest release artifact tag info from current_release.txt
     TAG=${TAG:-$(curl -L -s https://raw.githubusercontent.com/kontainapp/km/current/km-releases/current_release.txt)}
 

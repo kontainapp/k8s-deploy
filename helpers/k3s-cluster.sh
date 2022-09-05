@@ -28,7 +28,7 @@ print_help() {
 }
 main() {
     
-    curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="--no-deploy traefik --disable servicelb" INSTALL_K3S_VERSION="v1.24.3+k3s1" sh -s - --write-kubeconfig-mode 666
+    curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="--no-deploy traefik --disable servicelb --flannel-backend=host-gw" INSTALL_K3S_VERSION="v1.24.3+k3s1" sh -s - --write-kubeconfig-mode 666
 
     echo "waiting for k3s to become active"
     until systemctl is-active k3s; do echo -n "."; done

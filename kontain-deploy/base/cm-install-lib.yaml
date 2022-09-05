@@ -20,37 +20,46 @@ metadata:
   labels:
     app: kontain-init
 data:
-  kontain_install_lib.sh: |-
+  kontain_install_lib.sh: |
     #!/usr/bin/env bash
 
     function install_kontain_artifacts() {
-
-      set -x 
       
-      mkdir -p ${TMP_MOUNT_DIR}/kontain-artifacts
-      curl -L "${KONTAIN_RELEASE_URL}" | tar -xzf - -C ${TMP_MOUNT_DIR}/kontain-artifacts
-      mkdir -p ${ROOT_MOUNT_DIR}/opt/kontain/bin
-      cp ${TMP_MOUNT_DIR}/kontain-artifacts/km/km ${ROOT_MOUNT_DIR}/opt/kontain/bin/km
-      chmod +x ${ROOT_MOUNT_DIR}/opt/kontain/bin/km
-      cp ${TMP_MOUNT_DIR}/kontain-artifacts//bin/km_cli ${ROOT_MOUNT_DIR}/opt/kontain/bin/km_cli
-      cp ${TMP_MOUNT_DIR}/kontain-artifacts/container-runtime/krun ${ROOT_MOUNT_DIR}/opt/kontain/bin/krun
-      chmod +x /${ROOT_MOUNT_DIR}/opt/kontain/bin/krun
-      mkdir -p ${ROOT_MOUNT_DIR}/opt/kontain/shim
-      cp ${TMP_MOUNT_DIR}/kontain-artifacts/cloud/k8s/deploy/shim/containerd-shim-krun-v2 ${ROOT_MOUNT_DIR}/opt/kontain/shim/containerd-shim-krun-v2
-      chmod +x ${ROOT_MOUNT_DIR}/opt/kontain/shim/containerd-shim-krun-v2
-      chroot ${ROOT_MOUNT_DIR} cp ${TMP_MOUNT_DIR}/kontain-artifacts/cloud/k8s/deploy/shim/containerd-shim-krun-v2 ${SHIM_DIR}/containerd-shim-krun-v2
-      chroot ${ROOT_MOUNT_DIR} chmod +x ${SHIM_DIR}/containerd-shim-krun-v2
+      KONTAIN_ARTIFACT_DIR=/tmp/kontain-artifacts
+      OPT_KONTAIN=opt/kontain
+
+      MOUNTED_KONTAIN_ARTIFACT_DIR=${ROOT_MOUNT_DIR}/tmp/kontain-artifacts
+      MOUNTED_OPT_KONTAIN=${ROOT_MOUNT_DIR}/${OPT_KONTAIN}
+      MOUNTED_SHIM_DIR=${ROOT_MOUNT_DIR}/${SHIM_DIR}
+      
+      mkdir -p ${MOUNTED_KONTAIN_ARTIFACT_DIR}
+      curl -L "${KONTAIN_RELEASE_URL}" | tar -xzf - -C ${MOUNTED_KONTAIN_ARTIFACT_DIR}
+      mkdir -p ${MOUNTED_OPT_KONTAIN}/bin
+      cp ${MOUNTED_KONTAIN_ARTIFACT_DIR}/km/km ${MOUNTED_OPT_KONTAIN}/bin/km
+      chmod +x ${MOUNTED_OPT_KONTAIN}/bin/km
+      cp ${MOUNTED_KONTAIN_ARTIFACT_DIR}/bin/km_cli ${MOUNTED_OPT_KONTAIN}/bin/km_cli
+      cp ${MOUNTED_KONTAIN_ARTIFACT_DIR}/container-runtime/krun ${MOUNTED_OPT_KONTAIN}/bin/krun
+      chmod +x ${MOUNTED_OPT_KONTAIN}/bin/krun
+      mkdir -p ${MOUNTED_OPT_KONTAIN}/shim
+      cp ${MOUNTED_KONTAIN_ARTIFACT_DIR}/cloud/k8s/deploy/shim/containerd-shim-krun-v2 ${MOUNTED_OPT_KONTAIN}/shim/containerd-shim-krun-v2
+      chmod +x ${MOUNTED_OPT_KONTAIN}/shim/containerd-shim-krun-v2
+      cp ${MOUNTED_KONTAIN_ARTIFACT_DIR}/cloud/k8s/deploy/shim/containerd-shim-krun-v2 ${MOUNTED_SHIM_DIR}/containerd-shim-krun-v2
+      chmod +x ${MOUNTED_SHIM_DIR}/containerd-shim-krun-v2
 
       # check for kvm
       if [ -c ${ROOT_MOUNT_DIR}/dev/kvm ]; then
         chmod 666 ${ROOT_MOUNT_DIR}/dev/kvm
         if [ $( systemctl is-active systemd-udevd) = "active" ]; then 
-          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666"' > /tmp/rules
-          mv /tmp/rules ${ROOT_MOUNT_DIR}/etc/udev/rules.d/99-perm.rules
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666"' > ${ROOT_MOUNT_DIR}/tmp/rules
+          mv ${ROOT_MOUNT_DIR}/tmp/rules ${ROOT_MOUNT_DIR}/etc/udev/rules.d/99-perm.rules
           chroot ${ROOT_MOUNT_DIR} udevadm control --reload-rules && udevadm trigger
         fi
       else
-        chmod +x ${TMP_MOUNT_DIR}/kontain-artifacts/kkm.run
-        chroot ${ROOT_MOUNT_DIR} ${TMP_MOUNT_DIR}/kontain-artifacts/kkm.run -- --force-install
+        source /scripts-lib/kkm-install-pre.sh
+        cp ${MOUNTED_KONTAIN_ARTIFACT_DIR}/kkm.run ${MOUNTED_OPT_KONTAIN}/bin/kkm.run 
+        chmod +x ${MOUNTED_OPT_KONTAIN}/bin/kkm.run
+        chroot ${ROOT_MOUNT_DIR} ${OPT_KONTAIN}/bin/kkm.run --target ${OPT_KONTAIN}/bin/kkm-installer --noprogress -- --force-install 
+        rm -rf ${OPT_KONTAIN}/bin/kkm-installer
+        source /scripts-lib/kkm-install-post.sh
       fi
     }

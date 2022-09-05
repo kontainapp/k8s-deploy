@@ -19,7 +19,7 @@ metadata:
   labels:
     app: kontain-init
 data:
-  containerd-cfg-update.sh: |-
+  containerd-cfg-update.sh: |
     #!/usr/bin/env bash
 
     # must be called after containerd-cfg-get 

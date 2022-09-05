@@ -19,7 +19,7 @@ metadata:
   labels:
     app: kontain-init
 data:
-  containerd-restart.sh: |-
+  containerd-restart.sh: |
     #!/usr/bin/env bash
 
     echo "restart containerd"

@@ -17,7 +17,17 @@ kind: Kustomization
 bases:
   - ../../base
 
+configMapGenerator:
+  - name: env-configmap
+    namespace: kube-system
+    behavior: merge
+    envs:
+      - config.properties
+    files:
+      - TOML_TEMPLATE=config.toml.tmpl
+
 patchesStrategicMerge:
-  - containerd-config.yaml
-  - containerd-cfg-get.yaml
+  - containerd-cfg-update.yaml
   - containerd-restart.yaml
+  - kkm-install-pre.yaml
+  - kkm-install-post.yaml

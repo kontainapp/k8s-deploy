@@ -87,12 +87,11 @@ do_cleanup() {
 
 main() {
 
+    set -x
     # if key file provided - authenticate with google cloud, otherwise assume it has already been done  
     if [ -n "${key_file}" ]; then
         gcloud auth activate-service-account --key-file "${key_file}"
     fi
-
-    gcloud components install gke-gcloud-auth-plugin
 
     #Set our current project context
     gcloud config set project "${project_name}"
@@ -103,7 +102,9 @@ main() {
     #Tell GKE to create a single zone, single node cluster for us. 
     gcloud container clusters create "${cluster_name}" --region "${region}" --num-nodes=1 --image-type=UBUNTU_CONTAINERD
 
-    gcloud container clusters get-credentials "${cluster_name}"
+    export USE_GKE_GCLOUD_AUTH_PLUGIN=True
+    
+    gcloud container clusters get-credentials "${cluster_name}" --region "${region}"
 }
 
 if [ -n "$cleanup" ] && [ $arg_count == 1 ]; then

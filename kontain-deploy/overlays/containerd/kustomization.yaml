@@ -18,5 +18,9 @@ kind: Kustomization
 bases:
   - ../../base
 
-patchesStrategicMerge:
-  - containerd-config.yaml
+configMapGenerator:
+  - name: env-configmap
+    namespace: kube-system
+    behavior: merge
+    envs:
+      - config.properties
