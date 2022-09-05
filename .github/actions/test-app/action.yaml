@@ -6,9 +6,14 @@ runs:
   steps:
     - name: Deploy Test app and Verify install
       run: |
+        set -x 
         kubectl apply -f ./tests/test.yaml
-        until kubectl get pod -l kontain=test-app &> /dev/null; do sleep 1; done 
-        pod=$(kubectl get pod -l kontain=test-app -o jsonpath="{.items[0].metadata.name}")
-        kubectl wait --for=condition=Ready pod/"$pod" -n kube-system
-        kubectl exec  $pod -- uname -r | egrep -q -e '.*\.kontain\.(KKM|KVM)$' && echo success|| exit 1
+        x=1
+        while [[] $(kubectl get pods -l kontain=test-app -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True" ]] && [[ x -le 120 ]]
+        do 
+          echo "waiting for pod"
+          sleep 1
+          x=$(( $x + 1 ))
+        done
+        kubectl exec deployment.apps/kontain-test-app -- uname -r | egrep -q -e '.*\.kontain\.(KKM|KVM)$' && echo success|| exit 1
       shell: bash

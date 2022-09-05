@@ -6,14 +6,17 @@ runs:
   steps:
     - name: Build kkm and kkm_test
       run: |
+        set -x
         ./kontain-kustomize.sh --deploy-location=./kontain-deploy
-        status=$(kubectl get pod -A  -l app=kontain-init  -o jsonpath="{.items[0].status.phase}")
-        echo "Pod status: $status"
-        if [ $status != 'Running' ] ; then 
-          pod=$(kubectl get pod -A  -l app=kontain-init -o jsonpath="{.items[0].metadata.name}")
-          kubectl logs $pod -n kube-system 
-          exit 1
-        fi
-        pod=$(kubectl get pod -A  -l app=kontain-init -o jsonpath="{.items[0].metadata.name}")
-        kubectl logs $pod -n kube-system
+        # wait for pod to complete initialization
+        while [ -z "$status" ]
+        do 
+                echo "."
+                sleep 1
+                log=$(kubectl logs -l app=kontain-init -n kube-system 2>/dev/null)
+                echo "log = $log" 
+                status="$(echo $log | grep 'kontain-init completed')"
+                echo "status = $status"
+        done
+        kubectl logs -l app=kontain-init -n kube-system
       shell: bash

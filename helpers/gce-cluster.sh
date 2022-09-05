@@ -92,6 +92,8 @@ main() {
         gcloud auth activate-service-account --key-file "${key_file}"
     fi
 
+    gcloud components install gke-gcloud-auth-plugin
+
     #Set our current project context
     gcloud config set project "${project_name}"
 
@@ -99,9 +101,9 @@ main() {
     gcloud services enable container.googleapis.com
 
     #Tell GKE to create a single zone, single node cluster for us. 
-    #https://cloud.google.com/compute/quotas#checking_your_quota
     gcloud container clusters create "${cluster_name}" --region "${region}" --num-nodes=1 --image-type=UBUNTU_CONTAINERD
 
+    gcloud container clusters get-credentials "${cluster_name}"
 }
 
 if [ -n "$cleanup" ] && [ $arg_count == 1 ]; then

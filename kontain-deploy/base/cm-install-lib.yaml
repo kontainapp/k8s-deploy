@@ -24,7 +24,9 @@ data:
     #!/usr/bin/env bash
 
     function install_kontain_artifacts() {
-      echo "Install Kontain Runtime Artifacts (KM & KRUN)"
+
+      set -x 
+      
       mkdir -p ${TMP_MOUNT_DIR}/kontain-artifacts
       curl -L "${KONTAIN_RELEASE_URL}" | tar -xzf - -C ${TMP_MOUNT_DIR}/kontain-artifacts
       mkdir -p ${ROOT_MOUNT_DIR}/opt/kontain/bin

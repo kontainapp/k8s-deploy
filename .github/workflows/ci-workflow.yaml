@@ -70,11 +70,9 @@ jobs:
       - name: Make cluster
         run: |
           ./helpers/k3s-cluster.sh
-          export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
-          echo "::set-env name=KUBECONFIG::$KUBECONFIG"
+          echo "KUBECONFIG=/etc/rancher/k3s/k3s.yaml" >> $GITHUB_ENV
 
       - uses: ./.github/actions/deploy-kontain
-
       - uses: ./.github/actions/test-app
 
       - name: Cleanup cluster
@@ -126,10 +124,9 @@ jobs:
 
       - name: Make cluster
         run: |
-          ./helpers/gce-cluster.sh --project=gke-suport ci-deployment-test
-
+          ./helpers/gce-cluster.sh --project=gke-suport --region=us-central1-a ci-deployment-test
+          echo "USE_GKE_GCLOUD_AUTH_PLUGIN=True" >> $GITHUB_ENV
       - uses: ./.github/actions/deploy-kontain
-
       - uses: ./.github/actions/test-app
 
       - name: Cleanup cluster

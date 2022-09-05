@@ -41,7 +41,7 @@ main() {
 
     az group create --name "${resource_group_name}" --location "$region"
     # To access the nodes at the address created by `--enable-node-public-ip` need to open ssh port on the corresponding sg
-    az aks create -g "${resource_group_name}" -n "${cluster_name}" --enable-managed-identity --node-count 1 --node-vm-size Standard_D4s_v5 --enable-node-public-ip
+    az aks create -g "${resource_group_name}" -n "${cluster_name}" --enable-managed-identity --generate-ssh-keys --node-count 1 --node-vm-size Standard_D4s_v5 --enable-node-public-ip
 
     # Configure kubectl
     az aks get-credentials --resource-group "${resource_group_name}" --name "${cluster_name}" --overwrite-existing
