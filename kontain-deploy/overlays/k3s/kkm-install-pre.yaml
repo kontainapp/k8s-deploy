@@ -11,16 +11,17 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-apiVersion: apps/v1
-kind: DaemonSet
+apiVersion: v1
+kind: ConfigMap
 metadata:
-  name: kontain-node-initializer
+  name: kontain-kkm-install-pre
   namespace: kube-system
-spec:
-  template:
-    spec:
-      containers:
-        - name: node-initializer
-          env:
-            - name: CONTAINERD_CONFIG_FILE
-              value: "config.toml"
+  labels:
+    app: kontain-init
+data:
+  kkm-install-pre.sh: |
+    #!/usr/bin/env bash
+
+    cp /root/etc/resolv.conf /root/etc/resolv.conf.orig
+
+    cat /etc/resolv.conf >> /root/etc/resolv.conf

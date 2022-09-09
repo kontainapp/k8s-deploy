@@ -14,12 +14,12 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: kontain-containerd-cfg-get
+  name: kontain-kkm-install-post
   namespace: kube-system
   labels:
     app: kontain-init
 data:
-  containerd-cfg-get.sh: |
+  kkm-install-post.sh: |
     #!/usr/bin/env bash
 
-    CONTAINERD_CFG_FULL_PATH=${ROOT_MOUNT_DIR}/${CONTAINERD_CFG_DIR}/${CONTAINERD_CFG_FILE}
+    mv /root/etc/resolv.conf.orig /root/etc/resolv.conf

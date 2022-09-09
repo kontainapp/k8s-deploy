@@ -1,0 +1,30 @@
+name: Validate
+description: Deploy and Validate test app
+
+runs:
+  using: "composite"
+  steps:
+    - name: Deploy Test app and Verify install
+      run: |
+        function wait_for_pod() {
+          set +e
+          while [ "$status" != "True" ]
+          do
+            echo -n "."
+            sleep 1s
+            status=$(kubectl get pods -l kontain=test-app -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}')
+          done
+        }
+        export -f wait_for_pod
+
+        kubectl apply -f ./tests/test.yaml
+
+        timeout 1m bash -c wait_for_pod
+        echo ""
+
+        pname=$(kubectl get pod -l kontain=test-app -o jsonpath="{.items[0].metadata.name}")
+        echo "Pod name = $pname"
+        kubectl exec "${pname}" -- uname -r
+
+        kubectl exec deployment.apps/kontain-test-app -- uname -r | egrep -q -e '.*\.kontain\.(KKM|KVM)$' && echo success|| exit 1
+      shell: bash {0}

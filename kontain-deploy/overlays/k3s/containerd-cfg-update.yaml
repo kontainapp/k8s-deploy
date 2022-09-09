@@ -14,12 +14,12 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: kontain-containerd-cfg-get
+  name: kontain-containerd-cfg-update
   namespace: kube-system
   labels:
     app: kontain-init
 data:
-  containerd-cfg-get.sh: |
+  containerd-cfg-update.sh: |
     #!/usr/bin/env bash
 
-    CONTAINERD_CFG_FULL_PATH=${ROOT_MOUNT_DIR}/${CONTAINERD_CFG_DIR}/${CONTAINERD_CFG_FILE}
+    echo "${TOML_TEMPLATE}" >> ${CONTAINERD_CFG_FULL_PATH}.tmpl

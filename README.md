@@ -18,20 +18,19 @@ chmod +x kontain-kustomize.sh
 2. Run script to use latest version of deployment 
 
 ```
-./kontain-kustomize.sh [release-tag | location] [--dry-run=<strategy>] [--config=<path to properties file>]
+./kontain-kustomize.sh [--deploy-version=version | --deploy-location=path] [--km-version=version | --km-url=url>] [--dry-run=strategy] [--download=path]
+
 ```
 
 ### Script options
 |Option| Usage|
 |----------------------------------|---|
-|--release-tag=\<tag> | Kontain release tag to use. Be default uses current release 
-|--location=\<deployment location> | location of kontain-deploy directory 
-|--help\(-h) | prints help information
-|--dry-run=<strategy>" |If 'review' strategy, only generate resulting customization file. If 'client' strategy, only print the object that would be sent, without sending it. If 'server' strategy, submit server-side request without persisting the resource.
-|--config=<path to properties file>| path properties file to overwrite special settings in kontain deployment. Currently supported settings are:
-    -TAG - release tag to use to install kontain binaries. By default uses current release
-    -KONTAIN_RELEASE_URL = url to download kontain_bin.tar.gz. Development only
-> **Note**
-> Either --release-tag or --location maybe specified but not both. 
+|--deploy-version=\<tag> | Kontain Deployment version to use. Defaults to current release|
+|--deploy-location=\<deployment location> | location of kontain-deploy directory|
+|--km-version=\<tag> | Kontain release to deploy. Defaults to current Kontain release|
+|--km-url=\<url> | url to download kontain_bin.tar.gz. Development only|
+|--help(-h) | prints this message|
+|--dry-run=\<strategy> | If 'review' strategy, only generate resulting customization file. If 'client' strategy, only print the object that would be sent, without sending it. If 'server' strategy, submit server-side request without persisting the resource.|
+|--download=\<path> | downloads kontain-deploy directory structure to specified location. After script completion overlay file tree can be found in this directory.|
 
 

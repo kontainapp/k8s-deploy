@@ -20,7 +20,7 @@ metadata:
   labels:
     app: kontain-init
 data:
-  containerd-config.sh: |-
+  containerd-config.sh: |
     #!/usr/bin/env bash
 
     source /scripts-lib/containerd-cfg-get.sh

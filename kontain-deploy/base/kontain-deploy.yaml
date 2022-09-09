@@ -34,50 +34,18 @@ spec:
         - image: centos:7 # ubuntu:18.04
           name: node-initializer
           command: ["/scripts/entrypoint.sh"]
-          env:
-            - name: ROOT_MOUNT_DIR
-              value: /root
-            - name: TMP_MOUNT_DIR
-              value: /tmp
-            - name: CONTAINERD_CFG_DIR
-              value: /etc/containerd
-            - name: CONTAINERD_CFG_FILE
-              value: config.toml
-            - name: SHIM_DIR
-              value: /usr/local/bin
-            - name: CRIO_CFG_DIR
-              value: /etc/crio/
-            - name: NODE_NAME
-              valueFrom:
-                fieldRef:
-                  fieldPath: spec.nodeName
-            - name: TAG
-              valueFrom:
-                configMapKeyRef:
-                  name: env-config-map
-                  key: RELEASE_TAG
-                  optional: true
-            - name: KONTAIN_RELEASE_URL
-              valueFrom:
-                configMapKeyRef:
-                  name: env-config-map
-                  key: KONTAIN_RELEASE_URL
-                  optional: true
+          envFrom:
+            - configMapRef:
+                name: env-configmap
           securityContext:
             privileged: true
           volumeMounts:
             - name: root-mount
               mountPath: /root
-            - name: tmp-mount
-              mountPath: /tmp
-            - name: crio-conf
-              mountPath: /etc/crio/
-            - name: containerd-conf
-              mountPath: /etc/containerd/
-            - name: dbus
-              mountPath: /var/run/dbus
             - name: systemd
               mountPath: /run/systemd
+            - name: var
+              mountPath: /var
             - name: lib-entrypoint-install
               mountPath: /scripts-lib/kontain_install_lib.sh
               subPath: kontain_install_lib.sh
@@ -93,27 +61,24 @@ spec:
             - name: lib-containerd-restart
               mountPath: /scripts-lib/containerd-restart.sh
               subPath: containerd-restart.sh
+            - name: lib-kkm-install-pre
+              mountPath: /scripts-lib/kkm-install-pre.sh
+              subPath: kkm-install-pre.sh
+            - name: lib-kkm-install-post
+              mountPath: /scripts-lib/kkm-install-post.sh
+              subPath: kkm-install-post.sh
             - name: entrypoint
               mountPath: /scripts
       volumes:
         - name: root-mount
           hostPath:
             path: /
-        - name: tmp-mount
-          hostPath:
-            path: /tmp
-        - name: crio-conf
-          hostPath:
-            path: /etc/crio/
-        - name: containerd-conf
-          hostPath:
-            path: /etc/containerd/
-        - name: dbus
-          hostPath:
-            path: /var/run/dbus
         - name: systemd
           hostPath:
             path: /run/systemd
+        - name: var
+          hostPath:
+            path: /var
         - name: entrypoint
           configMap:
             name: kontain-install-entrypoint
@@ -137,4 +102,12 @@ spec:
         - name: lib-containerd-restart
           configMap:
             name: kontain-containerd-restart
+            defaultMode: 0744
+        - name: lib-kkm-install-pre
+          configMap:
+            name: kontain-kkm-install-pre
+            defaultMode: 0744
+        - name: lib-kkm-install-post
+          configMap:
+            name: kontain-kkm-install-post
             defaultMode: 0744

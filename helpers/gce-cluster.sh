@@ -21,7 +21,7 @@ region=us-central1-a
 arg_count=$#
 
 print_help() {
-    echo "usage: $0  [options] prefix"
+    echo "usage: $0  [options] --project=<project id> prefix"
     echo "Creates AKS cluster with the name <prefix>-aks-cluster. All other associated recource names are prefixes with <prefix> "
     echo ""
     echo "Prerequisites:"
@@ -30,7 +30,7 @@ print_help() {
     echo "  gke-gcloud-auth-plugin installed"
     echo ""
     echo "-h,--help print this help"
-    echo "--project project name"
+    echo "--project project id"
     echo "--key-file path to file containing your key"
     echo "--region Sets aws region. Default to us-central1-a"
     echo "--cleanup Instructs script to delete cluster and all related resourses "
@@ -82,13 +82,16 @@ readonly cluster_name="${prefix}"-cluster
 
 do_cleanup() {
     #Delete our GKE cluster
-    gcloud container clusters delete "${cluster_name}" --region="$region" 
-
+    gcloud container clusters delete --quiet "${cluster_name}" --region="$region" 
 }
 
 main() {
 
-    gcloud auth activate-service-account --key-file "${key_file}"
+    set -x
+    # if key file provided - authenticate with google cloud, otherwise assume it has already been done  
+    if [ -n "${key_file}" ]; then
+        gcloud auth activate-service-account --key-file "${key_file}"
+    fi
 
     #Set our current project context
     gcloud config set project "${project_name}"
@@ -97,9 +100,11 @@ main() {
     gcloud services enable container.googleapis.com
 
     #Tell GKE to create a single zone, single node cluster for us. 
-    #https://cloud.google.com/compute/quotas#checking_your_quota
     gcloud container clusters create "${cluster_name}" --region "${region}" --num-nodes=1 --image-type=UBUNTU_CONTAINERD
 
+    export USE_GKE_GCLOUD_AUTH_PLUGIN=True
+    
+    gcloud container clusters get-credentials "${cluster_name}" --region "${region}"
 }
 
 if [ -n "$cleanup" ] && [ $arg_count == 1 ]; then
@@ -109,11 +114,6 @@ fi
 
 if [ -z "$project_name" ]; then
     echo "Project is required "
-    exit 1
-fi
-
-if [ -z "$key_file" ]; then
-    echo "Key file is required "
     exit 1
 fi
 

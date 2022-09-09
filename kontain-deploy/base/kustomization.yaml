@@ -17,6 +17,8 @@ kind: Kustomization
 resources:
   - entry-point.yaml
   - cm-install-lib.yaml
+  - kkm-install-pre.yaml
+  - kkm-install-post.yaml
   - cm-containerd-install.yaml
   - containerd-cfg-get.yaml
   - containerd-cfg-update.yaml
@@ -25,7 +27,8 @@ resources:
   - kontain-deploy.yaml
 
 configMapGenerator:
-  - name: env-config-map
+  - name: env-configmap
     namespace: kube-system
     envs:
+      - .env
       - config.properties

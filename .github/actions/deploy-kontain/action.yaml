@@ -1,0 +1,32 @@
+name: Deploy Kontain
+description: Generate and apply Kontain deployment
+
+runs:
+  using: "composite"
+  steps:
+    - name: Build kkm and kkm_test
+      run: |
+        function wait_for_pod() {
+          set +e
+          # wait for pod to complete initialization
+          while [ -z "$status" ]
+          do 
+                  echo -n "."
+                  sleep 1s
+                  log=$(kubectl logs -l app=kontain-init -n kube-system 2>/dev/null)
+                  status="$(kubectl logs -l app=kontain-init -n kube-system 2>/dev/null | grep 'kontain-init completed')"
+          done
+        }
+        export -f wait_for_pod
+
+        ./kontain-kustomize.sh --deploy-location=./kontain-deploy
+
+        timeout 1m bash -c wait_for_pod
+        echo
+        kubectl logs -l app=kontain-init -n kube-system
+        status=$(kubectl get pods -n kube-system -l app=kontain-init -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}')
+        echo "Pod status = $status"
+        if [ "$status" != "True" ]; then  
+          exit 1; 
+        fi
+      shell: bash {0}
