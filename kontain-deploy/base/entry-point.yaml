@@ -33,11 +33,10 @@ data:
     ROOT_MOUNT_DIR="${ROOT_MOUNT_DIR:-/root}"
 
     echo "Install Kontain Runtime Artifacts (KM & KRUN)"
-    source /scripts-lib/kontain_install_lib.sh
-    install_kontain_artifacts
+    chroot ${ROOT_MOUNT_DIR} /bin/bash -c /scripts-lib/kontain_install_lib.sh
 
     echo "Configure Containerd"
-    source /scripts-lib/containerd-config.sh
+    chroot ${ROOT_MOUNT_DIR} /bin/bash -c ./scripts-lib/containerd-config.sh
 
     echo "kontain-init completed"
     sleep infinity

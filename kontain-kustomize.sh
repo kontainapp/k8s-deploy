@@ -204,7 +204,10 @@ overlay_dir="${func_retval}"
 
 cloud_provider=$(kubectl get nodes -ojson | jq -r '.items[0] | .spec | .providerID ' | cut -d':' -f1)
 if [ "$cloud_provider" = null ]; then
-    cloud_provider=$(kubectl get node -ojson | jq -r '.items[0] | .metadata | .name')
+    cloud_provider=$(kubectl get namespaces -ojson |jq -r '.items[] | .metadata | select(.name=="openshift").name')
+    if [ -z "$cloud_provider" ]; then 
+        cloud_provider=$(kubectl get node -ojson | jq -r '.items[0] | .metadata | .name')
+    fi    
 fi
 os=$(kubectl get nodes -ojson | jq -r '.items[0] | .status | .nodeInfo | .osImage')
 runtime=$(kubectl get node -ojson | jq -r '.items[0] | .status | .nodeInfo | .containerRuntimeVersion')
@@ -232,6 +235,9 @@ elif [ "$cloud_provider" = "minikube" ]; then
     else
         echo "Unsupported runtime"
     fi
+elif [ "$cloud_provider" = "openshift" ]; then
+    echo "In OpenShift"
+    overlay=containerd
 else
     echo "Unrecognized cluster provider $cloud_provider."
     echo ""
@@ -250,7 +256,7 @@ fi
 kubectl apply --dry-run="$strategy" -f "${kontain_yaml}"
 
 if [ "$strategy" == "none" ]; then 
-    pod=$(kubectl get pods -A -ojson | jq -r '.items[] | .metadata | .name |select(. | startswith("kontain") )')
+    pod=$(kubectl get pods --all-namespaces -ojson | jq -r '.items[] | .metadata | .name |select(. | startswith("kontain") )')
 
     echo "waiting for kontain deamonset to be running"
     kubectl wait --for=condition=Ready pod/"$pod" -n kube-system

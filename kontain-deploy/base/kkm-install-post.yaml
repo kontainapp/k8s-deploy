@@ -22,4 +22,4 @@ data:
   kkm-install-post.sh: |
     #!/usr/bin/env bash
 
-    echo ""
+    echo "Post-install kkm"

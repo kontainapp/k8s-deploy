@@ -22,4 +22,4 @@ data:
   kkm-install-pre.sh: |
     #!/usr/bin/env bash
 
-    echo ""
+    echo "Pre-install kkm"

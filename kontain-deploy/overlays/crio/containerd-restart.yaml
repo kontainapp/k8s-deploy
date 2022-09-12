@@ -23,8 +23,8 @@ data:
     #!/usr/bin/env bash
 
     # upgrade cri-o if necessary - bug in restart   
-    chroot ${ROOT_MOUNT_DIR} apt-get update
-    chroot ${ROOT_MOUNT_DIR} apt-get upgrade cri-o=1.24.2~0 --yes
+    apt-get update
+    apt-get upgrade cri-o=1.24.2~0 --yes
     systemctl daemon-reload
 
     echo "restart crio after applying customization"

@@ -23,6 +23,6 @@ data:
   containerd-config.sh: |
     #!/usr/bin/env bash
 
-    source /scripts-lib/containerd-cfg-get.sh
-    source /scripts-lib/containerd-cfg-update.sh
-    source /scripts-lib/containerd-restart.sh
+    /scripts-lib/containerd-cfg-get.sh
+    /scripts-lib/containerd-cfg-update.sh
+    /scripts-lib/containerd-restart.sh

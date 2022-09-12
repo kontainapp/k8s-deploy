@@ -47,25 +47,25 @@ spec:
             - name: var
               mountPath: /var
             - name: lib-entrypoint-install
-              mountPath: /scripts-lib/kontain_install_lib.sh
+              mountPath: /root/scripts-lib/kontain_install_lib.sh
               subPath: kontain_install_lib.sh
             - name: lib-containerd-install
-              mountPath: /scripts-lib/containerd-config.sh
+              mountPath: /root/scripts-lib/containerd-config.sh
               subPath: containerd-config.sh
             - name: lib-containerd-cfg-get
-              mountPath: /scripts-lib/containerd-cfg-get.sh
+              mountPath: /root/scripts-lib/containerd-cfg-get.sh
               subPath: containerd-cfg-get.sh
             - name: lib-containerd-cfg-update
-              mountPath: /scripts-lib/containerd-cfg-update.sh
+              mountPath: /root/scripts-lib/containerd-cfg-update.sh
               subPath: containerd-cfg-update.sh
             - name: lib-containerd-restart
-              mountPath: /scripts-lib/containerd-restart.sh
+              mountPath: /root/scripts-lib/containerd-restart.sh
               subPath: containerd-restart.sh
             - name: lib-kkm-install-pre
-              mountPath: /scripts-lib/kkm-install-pre.sh
+              mountPath: /root/scripts-lib/kkm-install-pre.sh
               subPath: kkm-install-pre.sh
             - name: lib-kkm-install-post
-              mountPath: /scripts-lib/kkm-install-post.sh
+              mountPath: /root/scripts-lib/kkm-install-post.sh
               subPath: kkm-install-post.sh
             - name: entrypoint
               mountPath: /scripts
