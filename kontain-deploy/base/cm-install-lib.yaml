@@ -51,10 +51,8 @@ data:
         udevadm control --reload-rules && udevadm trigger
       fi
     else
-      /scripts-lib/kkm-install-pre.sh
       cp ${KONTAIN_ARTIFACT_DIR}/kkm.run ${OPT_KONTAIN}/bin/kkm.run 
       chmod +x ${OPT_KONTAIN}/bin/kkm.run
       ${OPT_KONTAIN}/bin/kkm.run --target ${OPT_KONTAIN}/bin/kkm-installer --noprogress -- --force-install 
       rm -rf ${OPT_KONTAIN}/bin/kkm-installer
-      /scripts-lib/kkm-install-post.sh
     fi

@@ -29,5 +29,3 @@ configMapGenerator:
 patchesStrategicMerge:
   - containerd-cfg-update.yaml
   - containerd-restart.yaml
-  - kkm-install-pre.yaml
-  - kkm-install-post.yaml

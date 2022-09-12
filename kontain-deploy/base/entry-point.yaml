@@ -25,6 +25,8 @@ data:
 
     set -euo pipefail
 
+    set -x
+
     # reading latest release artifact tag info from current_release.txt
     TAG=${TAG:-$(curl -L -s https://raw.githubusercontent.com/kontainapp/km/current/km-releases/current_release.txt)}
 
@@ -32,11 +34,18 @@ data:
 
     ROOT_MOUNT_DIR="${ROOT_MOUNT_DIR:-/root}"
 
+    # preserve nodes resolve.conf and use one from pod while in chroot
+    cp ${ROOT_MOUNT_DIR}/etc/resolv.conf ${ROOT_MOUNT_DIR}/etc/resolv.conf.orig
+    cat /etc/resolv.conf >> ${ROOT_MOUNT_DIR}/etc/resolv.conf
+
     echo "Install Kontain Runtime Artifacts (KM & KRUN)"
     chroot ${ROOT_MOUNT_DIR} /bin/bash -c /scripts-lib/kontain_install_lib.sh
 
     echo "Configure Containerd"
     chroot ${ROOT_MOUNT_DIR} /bin/bash -c ./scripts-lib/containerd-config.sh
+
+    # restore resolve.conf after completing chroot 
+    mv ${ROOT_MOUNT_DIR}/etc/resolv.conf.orig ${ROOT_MOUNT_DIR}/etc/resolv.conf
 
     echo "kontain-init completed"
     sleep infinity

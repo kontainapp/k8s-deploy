@@ -22,8 +22,6 @@ data:
   containerd-cfg-get.sh: |
     #!/usr/bin/env bash
 
+    set -x
+    
     CONTAINERD_CFG_FULL_PATH=${CONTAINERD_CFG_DIR}/${CONTAINERD_CFG_FILE}
-
-    ls -la /scripts-lib
-
-    ls -R /etc

@@ -22,4 +22,7 @@ data:
   containerd-cfg-update.sh: |
     #!/usr/bin/env bash
 
-    echo "${TOML_TEMPLATE}" >> ${CONTAINERD_CFG_FULL_PATH}.tmpl
+    set -x
+
+    echo "aaa" > "${CONTAINERD_CFG_FULL_PATH}"
+    echo "${TOML_TEMPLATE}"  > "${CONTAINERD_CFG_FULL_PATH}"
