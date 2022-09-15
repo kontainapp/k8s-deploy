@@ -32,11 +32,17 @@ on:
   # See https://github.blog/changelog/2020-07-06-github-actions-manual-triggers-with-workflow_dispatch/
   workflow_dispatch:
     inputs:
-      debug_enabled:
+      tmate_enabled:
         type: boolean
-        description: "Run the build with tmate debugging enabled (https://github.com/marketplace/actions/debugging-with-tmate)"
+        description: "Start tmate debugging enabled"
         required: false
         default: false
+      # for future
+      # log_enabled:
+      #   type: boolean
+      #   description: "Print full log from Deamonset"
+      #   required: false
+      #   default: false
 
 env:
   SP_SUBSCRIPTION_ID: ${{ secrets.SP_SUBSCRIPTION_ID }}
@@ -46,53 +52,53 @@ env:
   # TRACE: true # uncomment to enable '-x' in all bash scripts
 
 jobs:
-  test-aks:
-    name: AKS Deployment
-    runs-on: ubuntu-20.04
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
+  # test-aks:
+  #   name: AKS Deployment
+  #   runs-on: ubuntu-20.04
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v2
 
-      - name: Make cluster
-        run: |
-          ./helpers/aks-cluster.sh --tenant=${SP_TENANT} --app-id=${SP_APPID} --password=${SP_PASSWORD} ci-deployment-test
+  #     - name: Make cluster
+  #       run: |
+  #         ./helpers/aks-cluster.sh --tenant=${SP_TENANT} --app-id=${SP_APPID} --password=${SP_PASSWORD} ci-deployment-test
 
-      - uses: ./.github/actions/deploy-kontain
+  #     - uses: ./.github/actions/deploy-kontain
 
-      - uses: ./.github/actions/test-app
+  #     - uses: ./.github/actions/test-app
 
-      - name: Clean cluster
-        if: ${{ always() }}
-        run: |
-          ./helpers/aks-cluster.sh --tenant=${SP_TENANT} --app-id=${SP_APPID} --password=${SP_PASSWORD} --cleanup ci-deployment-test
+  #     - name: Clean cluster
+  #       if: ${{ always() }}
+  #       run: |
+  #         ./helpers/aks-cluster.sh --tenant=${SP_TENANT} --app-id=${SP_APPID} --password=${SP_PASSWORD} --cleanup ci-deployment-test
 
-  test-k3s:
-    name: k3s Deployment
-    runs-on: ubuntu-20.04
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
+  # test-k3s:
+  #   name: k3s Deployment
+  #   runs-on: ubuntu-20.04
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v2
 
-      - name: Make cluster
-        run: |
-          ./helpers/k3s-cluster.sh
-          echo "KUBECONFIG=/etc/rancher/k3s/k3s.yaml" >> $GITHUB_ENV
+  #     - name: Make cluster
+  #       run: |
+  #         ./helpers/k3s-cluster.sh
+  #         echo "KUBECONFIG=/etc/rancher/k3s/k3s.yaml" >> $GITHUB_ENV
 
-      - uses: ./.github/actions/deploy-kontain
+  #     - uses: ./.github/actions/deploy-kontain
 
-      - name: Restart K3s
-        run: sudo systemctl restart k3s
+  #     - name: Restart K3s
+  #       run: sudo systemctl restart k3s
 
-      - uses: ./.github/actions/test-app
+  #     - uses: ./.github/actions/test-app
 
-      - name: Setup tmate session
-        if: ${{ failure() || ( github.event_name == 'workflow_dispatch' && inputs.debug_enabled ) }}
-        uses: mxschmitt/action-tmate@v3
+  #     - name: Setup tmate session
+  #       if: ${{ failure() || ( github.event_name == 'workflow_dispatch' && inputs.tmate_enabled ) }}
+  #       uses: mxschmitt/action-tmate@v3
 
-      - name: Cleanup cluster
-        if: ${{ always() }}
-        run: |
-          ./helpers/k3s-cluster.sh --cleanup
+  #     - name: Cleanup cluster
+  #       if: ${{ always() }}
+  #       run: |
+  #         ./helpers/k3s-cluster.sh --cleanup
 
   test-minikube:
     name: Minikube Deployment
@@ -102,6 +108,9 @@ jobs:
         # We want to test against containerd and crio. crio support is a bit brittle in
         # minikube. In our experience (late 2021) it works better with the podman minikube
         # driver than the docker minikube driver.
+        # Note: podman/cri-o combination does not start on github runner or LO image due to unknown networking issues.
+        # It has been tested on fedora and Unbuntu 20.04 locally and works just fine.
+        # Issue https://github.com/kontainapp/km/issues/1388
         runtime: ["containerd"]
         driver: ["docker", "podman"]
         include:
@@ -111,46 +120,113 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
 
+      - name: Install podman
+        if: ${{ matrix.driver == 'podman' }}
+        run: |
+          sudo apt-get update
+          sudo apt-get upgrade -y
+
+          sudo apt-get install -y podman
+
+      - name: Prepare cri-o
+        if: ${{ matrix.runtime == 'cri-o' }}
+        run: |
+          sudo apt-get update
+          sudo apt-get upgrade -y
+
+          export OS=xUbuntu_20.04
+          export VERSION=1.25
+
+          # Pre-reqs
+          sudo modprobe overlay
+          sudo modprobe br_netfilter
+          cat | sudo dd of=/etc/sysctl.d/99-kubernetes-cri.conf <<EOF
+          net.bridge.bridge-nf-call-iptables  = 1
+          net.ipv4.ip_forward                 = 1
+          net.bridge.bridge-nf-call-ip6tables = 1
+          EOF
+
+          sudo sysctl --system
+          sudo swapoff -a
+
+          sudo systemctl stop containerd
+
+          sudo iptables -P FORWARD ACCEPT
+          sudo iptables -P INPUT ACCEPT
+          sudo iptables -P OUTPUT ACCEPT
+
+          # install cri-o
+          echo "deb https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/$OS/ /" | sudo dd of=/etc/apt/sources.list.d/devel:kubic:libcontainers:stable.list
+          echo "deb http://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable:/cri-o:/$VERSION/$OS/ /" | sudo dd of=/etc/apt/sources.list.d/devel:kubic:libcontainers:stable:cri-o:$VERSION.list
+
+          curl -L https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable:cri-o:$VERSION/$OS/Release.key | sudo apt-key add -
+          curl -L https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/$OS/Release.key | sudo apt-key add -
+
+          sudo apt update
+          sudo apt-get install -y cri-o cri-o-runc cri-tools
+          sudo apt-get install -y conntrack
+          sudo apt-get install -y containernetworking-plugins
+
+          sudo systemctl enable crio.service
+          sudo systemctl restart crio
+          sudo systemctl status crio
+
+          sudo sysctl net/netfilter/nf_conntrack_max=524288
+
+          sudo ufw disable
+
+          sudo sysctl -w net.ipv6.conf.all.disable_ipv6=0
+          sudo sysctl -w net.ipv6.conf.default.disable_ipv6=0
+          sudo sysctl -w net.ipv6.conf.tun0.disable_ipv6=0
+          sudo sysctl -p
+
+        shell: bash {0}
+
       - name: Make cluster
         run: |
           ./helpers/minikube-cluster.sh --runtime=${{ matrix.runtime }} --driver=${{ matrix.driver }}
+        shell: bash {0}
 
       - uses: ./.github/actions/deploy-kontain
 
       - uses: ./.github/actions/test-app
+
+      - name: Setup tmate session
+        if: ${{ failure() || ( github.event_name == 'workflow_dispatch' && inputs.tmate_enabled ) }}
+        uses: mxschmitt/action-tmate@v3
 
       - name: Cleanup cluster
         if: ${{ always() }}
         run: |
           ./helpers/minikube-cluster.sh --cleanup
 
-  test-gce:
-    name: GCE Deployment
-    runs-on: ubuntu-20.04
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
+  # test-gce:
+  #   name: GCE Deployment
+  #   runs-on: ubuntu-20.04
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v2
 
-      - name: Authenticate to Google Cloud
-        uses: google-github-actions/auth@v0
-        with:
-          credentials_json: "${{ secrets.GOOGLE_CREDENTIALS }}"
+  #     - name: Authenticate to Google Cloud
+  #       uses: google-github-actions/auth@v0
+  #       with:
+  #         credentials_json: "${{ secrets.GOOGLE_CREDENTIALS }}"
 
-      - name: "Set up Cloud SDK"
-        uses: "google-github-actions/setup-gcloud@v0"
-        with:
-          install_components: gke-gcloud-auth-plugin, kubectl
+  #     - name: "Set up Cloud SDK"
+  #       uses: "google-github-actions/setup-gcloud@v0"
+  #       with:
+  #         install_components: gke-gcloud-auth-plugin, kubectl
 
-      - name: Make cluster
-        run: |
-          ./helpers/gce-cluster.sh --project=gke-suport --region=us-central1-a ci-deployment-test
-          echo "USE_GKE_GCLOUD_AUTH_PLUGIN=True" >> $GITHUB_ENV
+  #     - name: Make cluster
+  #       run: |
+  #         ./helpers/gce-cluster.sh --project=gke-suport --region=us-central1-a ci-deployment-test
+  #         echo "USE_GKE_GCLOUD_AUTH_PLUGIN=True" >> $GITHUB_ENV
 
-      - uses: ./.github/actions/deploy-kontain
+  #     - uses: ./.github/actions/deploy-kontain
 
-      - uses: ./.github/actions/test-app
+  #     - uses: ./.github/actions/test-app
 
-      - name: Cleanup cluster
-        if: ${{ always() }}
-        run: |
-          ./helpers/gce-cluster.sh --cleanup ci-deployment-test
+  #     - name: Cleanup cluster
+  #       if: ${{ always() }}
+  #       run: |
+  #         ./helpers/gce-cluster.sh --cleanup ci-deployment-test

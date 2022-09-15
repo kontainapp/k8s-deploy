@@ -26,11 +26,12 @@ chmod +x kontain-kustomize.sh
 |Option| Usage|
 |----------------------------------|---|
 |--deploy-version=\<tag> | Kontain Deployment version to use. Defaults to current release|
-|--deploy-location=\<deployment location> | location of kontain-deploy directory|
+|--deploy-location=\<deployment location> | location of local kontain-deploy directory|
 |--km-version=\<tag> | Kontain release to deploy. Defaults to current Kontain release|
 |--km-url=\<url> | url to download kontain_bin.tar.gz. Development only|
 |--help(-h) | prints this message|
 |--dry-run=\<strategy> | If 'review' strategy, only generate resulting customization file. If 'client' strategy, only print the object that would be sent, without sending it. If 'server' strategy, submit server-side request without persisting the resource.|
 |--download=\<path> | downloads kontain-deploy directory structure to specified location. After script completion overlay file tree can be found in this directory.|
+| --remove | removes all the resources produced by overlay
 
 

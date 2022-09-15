@@ -36,7 +36,7 @@ function print_help() {
     echo ""
     echo "Options:"
     echo "  --deploy-version=<tag> - Kontain Deployment version to use. Defaults to current release"
-    echo "  --deploy-location=<deployment location> - location of kontain-deploy directory"
+    echo "  --deploy-location=<deployment location> - location of kontain-deploy local directory"
     echo "  --km-version=<tag> - Kontain release to deploy. Defaults to current Kontain release"
     echo "  --km-url=<url> - url to download kontain_bin.tar.gz. Development only"
     echo "*** Note: only --release-tag or --location maybe specified but not both. "
@@ -233,6 +233,7 @@ elif [ "$cloud_provider" = "k3s" ]; then
     overlay=k3s
     post_process="echo -e 'Make sure to restart k3s by using the following command\n\tsudo systemctl restart k3s'"
 elif [ "$cloud_provider" = "minikube" ]; then
+    driver=$(minikube profile list -o json | jq -r '.valid[0]|.Config|.Driver')
     if [[ $runtime =~ crio* ]]; then 
         overlay=crio
     elif [[ $runtime =~ containerd ]]; then 
@@ -251,6 +252,13 @@ else
     exit 1
 fi
 
+config_file=${overlay_dir}/../base/config.properties
+if grep -q "K8S_FLAVOUR=" ${config_file}; then
+    sed -i "s/\(K8S_FLAVOUR=\)\(.*\)/\1$cloud_provider/" ${config_file}
+else
+    echo -e "\nK8S_FLAVOUR=$cloud_provider" >> ${config_file}
+fi
+
 overlay_dir=${overlay_dir}/${overlay}
 
 kubectl kustomize "$overlay_dir" > "${kontain_yaml}"
@@ -262,10 +270,9 @@ fi
 kubectl "$command" --dry-run="$strategy" -f "${kontain_yaml}"
 
 if [ "$strategy" == "none" ]; then 
-    pod=$(kubectl get pods --all-namespaces -ojson | jq -r '.items[] | .metadata | .name |select(. | startswith("kontain") )')
-
     echo "waiting for kontain deamonset to be running"
-    kubectl wait --for=condition=Ready pod/"$pod" -n kube-system
+    
+    kubectl wait --for=condition=Ready pods -n kube-system -l app=kontain-init
 
     eval ${post_process}
 fi

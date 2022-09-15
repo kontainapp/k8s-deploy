@@ -35,9 +35,23 @@ data:
         udevadm control --reload-rules
         udevadm trigger
       fi
-    else
+    elif [ ! -c "${ROOT_MOUNT_DIR}/dev/kkm" ]; then
+      # make sure filesystem is writable
+      permissions=$(mount | grep modules | grep -ow ro)
+      mount_point=$(mount | grep modules | cut -d" " -f3)
+      echo "permissions = $permissions"
+      if [ -n "$permissions" ]; then 
+        mount -o remount,rw "$mount_point"
+      fi
       cp ${ROOT_MOUNT_DIR}/${KONTAIN_ARTIFACT_DIR}/kkm.run ${ROOT_MOUNT_DIR}/${OPT_KONTAIN}/bin/kkm.run 
       chmod +x ${ROOT_MOUNT_DIR}/${OPT_KONTAIN}/bin/kkm.run
       chroot ${ROOT_MOUNT_DIR}/ ${OPT_KONTAIN}/bin/kkm.run --target ${OPT_KONTAIN}/bin/kkm-installer --noprogress -- --force-install 
       rm -rf ${ROOT_MOUNT_DIR}/${OPT_KONTAIN}/bin/kkm-installer
+      if [ "$K8S_FLAVOUR" = "minikube" ]; then
+        major=$(awk -e '/misc/{print $1}' ${ROOT_MOUNT_DIR}/proc/devices)
+        minor=$(awk -e '/kkm/{print $1}' ${ROOT_MOUNT_DIR}/proc/misc)
+        mknod ${ROOT_MOUNT_DIR}/dev/kkm c $major $minor
+        chmod 666 ${ROOT_MOUNT_DIR}/dev/kkm
+      fi
+
     fi

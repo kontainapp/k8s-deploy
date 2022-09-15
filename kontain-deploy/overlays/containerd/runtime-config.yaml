@@ -22,6 +22,8 @@ data:
   runtime-config.sh: |
     #!/usr/bin/env bash
 
+    [ "$TRACE" ] && set -x
+
     CONTAINERD_CFG_FULL_PATH=${CONTAINERD_CFG_DIR}/${CONTAINERD_CFG_FILE}
 
     runtime="krun"
