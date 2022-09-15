@@ -11,18 +11,26 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: kontain-containerd-install
+  name: kontain-runtime-restart
   namespace: kube-system
   labels:
     app: kontain-init
 data:
-  containerd-config.sh: |
+  runtime-restart.sh: |-
     #!/usr/bin/env bash
 
-    /scripts-lib/containerd-cfg-get.sh
-    /scripts-lib/containerd-cfg-update.sh
-    /scripts-lib/containerd-restart.sh
+    [ "$TRACE" ] && set -x
+
+    # upgrade cri-o if necessary - bug in restart 
+    # we do it on node, so use chroot  
+    chroot ${ROOT_MOUNT_DIR} /usr/bin/env bash -c "$(cat <<EOT
+      apt-get update
+      apt-get upgrade cri-o --yes
+    EOT
+    )"
+
+    echo "restart crio after applying customization"
+    systemctl restart crio

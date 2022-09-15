@@ -18,6 +18,12 @@ bases:
   - ../../base
 
 patchesStrategicMerge:
-  - kontain-config.yaml
-  - containerd-cfg-update.yaml
-  - containerd-restart.yaml
+  - runtime-config.yaml
+  - runtime-restart.yaml
+
+configMapGenerator:
+  - name: env-configmap
+    namespace: kube-system
+    behavior: merge
+    envs:
+      - config.properties

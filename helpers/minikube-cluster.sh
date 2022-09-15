@@ -64,7 +64,7 @@ done
 main() {
     extra_options=""
     if [ "$driver" = "docker" ]; then
-        extra_options="--base-image=kicbase:latest --preload=false"
+        extra_options=" --preload=false"
     fi
     minikube start --container-runtime="$runtime" --driver="$driver" "$extra_options" --wait=all
 }

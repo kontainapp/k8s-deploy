@@ -27,5 +27,5 @@ configMapGenerator:
       - TOML_TEMPLATE=config.toml.tmpl
 
 patchesStrategicMerge:
-  - containerd-cfg-update.yaml
-  - containerd-restart.yaml
+  - runtime-config.yaml
+  - runtime-restart.yaml

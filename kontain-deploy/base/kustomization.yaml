@@ -16,15 +16,12 @@ kind: Kustomization
 
 resources:
   - entry-point.yaml
-  - cm-install-lib.yaml
-  - kkm-install-pre.yaml
-  - kkm-install-post.yaml
-  - cm-containerd-install.yaml
-  - containerd-cfg-get.yaml
-  - containerd-cfg-update.yaml
-  - containerd-restart.yaml
+  - kontain-install-artifacts.yaml
+  - runtime-config.yaml
+  - runtime-restart.yaml
   - runtime-class.yaml
   - kontain-deploy.yaml
+  - kvm-kkm-install.yaml
 
 configMapGenerator:
   - name: env-configmap
@@ -32,3 +29,5 @@ configMapGenerator:
     envs:
       - .env
       - config.properties
+generatorOptions:
+  disableNameSuffixHash: true

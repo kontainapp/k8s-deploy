@@ -14,17 +14,15 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: kontain-containerd-cfg-update
+  name: kontain-runtime-config
   namespace: kube-system
   labels:
     app: kontain-init
 data:
-  containerd-cfg-update.sh: |
+  runtime-config.sh: |
     #!/usr/bin/env bash
 
-    # must be called after containerd-cfg-get 
-    [ -z "${CONTAINERD_CFG_FULL_PATH}" ] && echo "must be called after containerd-cfg-get" && exit 1
-
+    CONTAINERD_CFG_FULL_PATH=${CONTAINERD_CFG_DIR}/${CONTAINERD_CFG_FILE}
 
     runtime="krun"
     pluginid=cri
@@ -43,3 +41,7 @@ data:
       echo "privileged_without_host_devices = true" | tee -a "${CONTAINERD_CFG_FULL_PATH}"
       echo "pod_annotations = [\"app.kontain.*\"]" | tee -a "${CONTAINERD_CFG_FULL_PATH}"
     fi
+
+    # copy SHIM
+    cp ${KONTAIN_ARTIFACT_DIR}/cloud/k8s/deploy/shim/containerd-shim-krun-v2 ${SHIM_DIR}/containerd-shim-krun-v2
+    chmod +x ${SHIM_DIR}/containerd-shim-krun-v2

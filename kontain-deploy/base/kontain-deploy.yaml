@@ -44,29 +44,18 @@ spec:
               mountPath: /root
             - name: systemd
               mountPath: /run/systemd
-            - name: var
-              mountPath: /var
             - name: lib-entrypoint-install
-              mountPath: /root/scripts-lib/kontain_install_lib.sh
-              subPath: kontain_install_lib.sh
-            - name: lib-containerd-install
-              mountPath: /root/scripts-lib/containerd-config.sh
-              subPath: containerd-config.sh
-            - name: lib-containerd-cfg-get
-              mountPath: /root/scripts-lib/containerd-cfg-get.sh
-              subPath: containerd-cfg-get.sh
-            - name: lib-containerd-cfg-update
-              mountPath: /root/scripts-lib/containerd-cfg-update.sh
-              subPath: containerd-cfg-update.sh
-            - name: lib-containerd-restart
-              mountPath: /root/scripts-lib/containerd-restart.sh
-              subPath: containerd-restart.sh
-            - name: lib-kkm-install-pre
-              mountPath: /root/scripts-lib/kkm-install-pre.sh
-              subPath: kkm-install-pre.sh
-            - name: lib-kkm-install-post
-              mountPath: /root/scripts-lib/kkm-install-post.sh
-              subPath: kkm-install-post.sh
+              mountPath: /root/scripts-lib/kontain-install-artifacts.sh
+              subPath: kontain-install-artifacts.sh
+            - name: lib-runtime-config
+              mountPath: /root/scripts-lib/runtime-config.sh
+              subPath: runtime-config.sh
+            - name: lib-runtime-restart
+              mountPath: /root/scripts-lib/runtime-restart.sh
+              subPath: runtime-restart.sh
+            - name: lib-kvm-kkm-install
+              mountPath: /root/scripts-lib/kvm-kkm-install.sh
+              subPath: kvm-kkm-install.sh
             - name: entrypoint
               mountPath: /scripts
       volumes:
@@ -76,38 +65,23 @@ spec:
         - name: systemd
           hostPath:
             path: /run/systemd
-        - name: var
-          hostPath:
-            path: /var
         - name: entrypoint
           configMap:
             name: kontain-install-entrypoint
             defaultMode: 0744
         - name: lib-entrypoint-install
           configMap:
-            name: kontain-install-lib
+            name: kontain-install-artifacts
             defaultMode: 0744
-        - name: lib-containerd-install
+        - name: lib-runtime-config
           configMap:
-            name: kontain-containerd-install
+            name: kontain-runtime-config
             defaultMode: 0744
-        - name: lib-containerd-cfg-get
+        - name: lib-runtime-restart
           configMap:
-            name: kontain-containerd-cfg-get
+            name: kontain-runtime-restart
             defaultMode: 0744
-        - name: lib-containerd-cfg-update
+        - name: lib-kvm-kkm-install
           configMap:
-            name: kontain-containerd-cfg-update
-            defaultMode: 0744
-        - name: lib-containerd-restart
-          configMap:
-            name: kontain-containerd-restart
-            defaultMode: 0744
-        - name: lib-kkm-install-pre
-          configMap:
-            name: kontain-kkm-install-pre
-            defaultMode: 0744
-        - name: lib-kkm-install-post
-          configMap:
-            name: kontain-kkm-install-post
+            name: kontain-kvm-kkm-install
             defaultMode: 0744

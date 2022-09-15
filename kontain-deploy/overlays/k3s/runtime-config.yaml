@@ -14,14 +14,20 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: kontain-containerd-restart
+  name: kontain-runtime-config
   namespace: kube-system
   labels:
     app: kontain-init
 data:
-  containerd-restart.sh: |
+  runtime-config.sh: |
     #!/usr/bin/env bash
 
-    echo "restart containerd"
-    systemctl daemon-reload
-    systemctl restart containerd
+    [ "$TRACE" ] && set -x
+
+    CONTAINERD_CFG_FULL_PATH=${CONTAINERD_CFG_DIR}/${CONTAINERD_CFG_FILE}
+
+    echo "${TOML_TEMPLATE}"  > "${CONTAINERD_CFG_FULL_PATH}"
+
+    # copy SHIM
+    cp ${KONTAIN_ARTIFACT_DIR}/cloud/k8s/deploy/shim/containerd-shim-krun-v2 ${SHIM_DIR}/containerd-shim-krun-v2
+    chmod +x ${SHIM_DIR}/containerd-shim-krun-v2

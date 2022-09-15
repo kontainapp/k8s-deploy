@@ -25,27 +25,34 @@ data:
 
     set -euo pipefail
 
-    set -x
+    [ "$TRACE" ] && set -x
 
     # reading latest release artifact tag info from current_release.txt
     TAG=${TAG:-$(curl -L -s https://raw.githubusercontent.com/kontainapp/km/current/km-releases/current_release.txt)}
 
     KONTAIN_RELEASE_URL=${KONTAIN_RELEASE_URL:-"https://github.com/kontainapp/km/releases/download/${TAG}/kontain_bin.tar.gz"}
 
-    ROOT_MOUNT_DIR="${ROOT_MOUNT_DIR:-/root}"
-
     # preserve nodes resolve.conf and use one from pod while in chroot
     cp ${ROOT_MOUNT_DIR}/etc/resolv.conf ${ROOT_MOUNT_DIR}/etc/resolv.conf.orig
     cat /etc/resolv.conf >> ${ROOT_MOUNT_DIR}/etc/resolv.conf
 
     echo "Install Kontain Runtime Artifacts (KM & KRUN)"
-    chroot ${ROOT_MOUNT_DIR} /bin/bash -c /scripts-lib/kontain_install_lib.sh
+    chroot ${ROOT_MOUNT_DIR} /bin/bash -c /scripts-lib/kontain-install-artifacts.sh
 
-    echo "Configure Containerd"
-    chroot ${ROOT_MOUNT_DIR} /bin/bash -c ./scripts-lib/containerd-config.sh
+    echo "Configure Runtime"
+    chroot ${ROOT_MOUNT_DIR} /bin/bash -c /scripts-lib/runtime-config.sh
+
+    echo "Configure KVM/KKM"
+    ${ROOT_MOUNT_DIR}/scripts-lib/kvm-kkm-install.sh
+
+    # restart whatever services are needed. It may use chroot inside as needed
+    ${ROOT_MOUNT_DIR}/scripts-lib/runtime-restart.sh
 
     # restore resolve.conf after completing chroot 
-    mv ${ROOT_MOUNT_DIR}/etc/resolv.conf.orig ${ROOT_MOUNT_DIR}/etc/resolv.conf
+    cp ${ROOT_MOUNT_DIR}/etc/resolv.conf.orig ${ROOT_MOUNT_DIR}/etc/resolv.conf
+
+    # clean up directories 
+    rm -rf ${KONTAIN_ARTIFACT_DIR}
 
     echo "kontain-init completed"
     sleep infinity

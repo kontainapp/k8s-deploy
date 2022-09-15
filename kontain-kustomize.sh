@@ -27,6 +27,7 @@ strategy="none"
 input_errors=""
 clean_dir=false
 custom_config=false
+command=apply
 
 function print_help() {
     echo "usage: $0  [--deploy-version=version | --deploy-location=path] [--km-version=version | --km-url=url>] [--dry-run=strategy] [--download=path]"
@@ -45,6 +46,7 @@ function print_help() {
     echo "  --dry-run=<strategy> If 'review' strategy, only generate resulting customization file. If 'client' strategy, only print the object that would be sent, without 
 	sending it. If 'server' strategy, submit server-side request without persisting the resource."
     echo "  --download=<path> - downloads kontain-deploy directory structure to specified location. After script completion overlay file tree can be found in this directory."
+    echo "  --remove - removes all the resources produced by overlay"
     exit 1
 }
 
@@ -176,6 +178,9 @@ do
             read_parameter "${1}"
             download_dir="${func_retval}"
         ;;
+        --remove)
+            command=delete
+        ;;
         --help | -h)
             print_help
         ;;
@@ -226,7 +231,7 @@ elif [ "$cloud_provider" = "gce" ]; then
     fi
 elif [ "$cloud_provider" = "k3s" ]; then
     overlay=k3s
-    post_process="echo 'Make sure to restart k3s by using the following command\n\tsudo systemctl restart k3s'"
+    post_process="echo -e 'Make sure to restart k3s by using the following command\n\tsudo systemctl restart k3s'"
 elif [ "$cloud_provider" = "minikube" ]; then
     if [[ $runtime =~ crio* ]]; then 
         overlay=crio
@@ -234,6 +239,7 @@ elif [ "$cloud_provider" = "minikube" ]; then
         overlay=containerd
     else
         echo "Unsupported runtime"
+        exit 1
     fi
 elif [ "$cloud_provider" = "openshift" ]; then
     echo "In OpenShift"
@@ -253,7 +259,7 @@ if [ "$strategy" = "review" ]; then
     exit
 fi
 
-kubectl apply --dry-run="$strategy" -f "${kontain_yaml}"
+kubectl "$command" --dry-run="$strategy" -f "${kontain_yaml}"
 
 if [ "$strategy" == "none" ]; then 
     pod=$(kubectl get pods --all-namespaces -ojson | jq -r '.items[] | .metadata | .name |select(. | startswith("kontain") )')
