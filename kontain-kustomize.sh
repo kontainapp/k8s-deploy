@@ -45,7 +45,7 @@ function print_help() {
     echo "  --help(-h) - prints this message"
     echo "  --dry-run=<strategy> If 'review' strategy, only generate resulting customization file. If 'client' strategy, only print the object that would be sent, without 
 	sending it. If 'server' strategy, submit server-side request without persisting the resource."
-    echo "  --download=<path> - downloads kontain-deploy directory structure to specified location. After script completion overlay file tree can be found in this directory."
+    echo "  --download=<path> - downloads kontain-deploy directory structure to specified location. After script completion overlay file tree can be found in this directory. If needed, directory will be created"
     echo "  --remove - removes all the resources produced by overlay"
     exit 1
 }
@@ -206,6 +206,11 @@ prepare_km
 
 prepare_overlay
 overlay_dir="${func_retval}"
+
+if [ -n "$download_dir" ]; then
+    #download requested - no application
+    exit
+fi
 
 cloud_provider=$(kubectl get nodes -ojson | jq -r '.items[0] | .spec | .providerID ' | cut -d':' -f1)
 if [ "$cloud_provider" = null ]; then

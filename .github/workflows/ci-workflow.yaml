@@ -52,53 +52,53 @@ env:
   # TRACE: true # uncomment to enable '-x' in all bash scripts
 
 jobs:
-  # test-aks:
-  #   name: AKS Deployment
-  #   runs-on: ubuntu-20.04
-  #   steps:
-  #     - name: Checkout
-  #       uses: actions/checkout@v2
+  test-aks:
+    name: AKS Deployment
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
 
-  #     - name: Make cluster
-  #       run: |
-  #         ./helpers/aks-cluster.sh --tenant=${SP_TENANT} --app-id=${SP_APPID} --password=${SP_PASSWORD} ci-deployment-test
+      - name: Make cluster
+        run: |
+          ./helpers/aks-cluster.sh --tenant=${SP_TENANT} --app-id=${SP_APPID} --password=${SP_PASSWORD} ci-deployment-test
 
-  #     - uses: ./.github/actions/deploy-kontain
+      - uses: ./.github/actions/deploy-kontain
 
-  #     - uses: ./.github/actions/test-app
+      - uses: ./.github/actions/test-app
 
-  #     - name: Clean cluster
-  #       if: ${{ always() }}
-  #       run: |
-  #         ./helpers/aks-cluster.sh --tenant=${SP_TENANT} --app-id=${SP_APPID} --password=${SP_PASSWORD} --cleanup ci-deployment-test
+      - name: Clean cluster
+        if: ${{ always() }}
+        run: |
+          ./helpers/aks-cluster.sh --tenant=${SP_TENANT} --app-id=${SP_APPID} --password=${SP_PASSWORD} --cleanup ci-deployment-test
 
-  # test-k3s:
-  #   name: k3s Deployment
-  #   runs-on: ubuntu-20.04
-  #   steps:
-  #     - name: Checkout
-  #       uses: actions/checkout@v2
+  test-k3s:
+    name: k3s Deployment
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
 
-  #     - name: Make cluster
-  #       run: |
-  #         ./helpers/k3s-cluster.sh
-  #         echo "KUBECONFIG=/etc/rancher/k3s/k3s.yaml" >> $GITHUB_ENV
+      - name: Make cluster
+        run: |
+          ./helpers/k3s-cluster.sh
+          echo "KUBECONFIG=/etc/rancher/k3s/k3s.yaml" >> $GITHUB_ENV
 
-  #     - uses: ./.github/actions/deploy-kontain
+      - uses: ./.github/actions/deploy-kontain
 
-  #     - name: Restart K3s
-  #       run: sudo systemctl restart k3s
+      - name: Restart K3s
+        run: sudo systemctl restart k3s
 
-  #     - uses: ./.github/actions/test-app
+      - uses: ./.github/actions/test-app
 
-  #     - name: Setup tmate session
-  #       if: ${{ failure() || ( github.event_name == 'workflow_dispatch' && inputs.tmate_enabled ) }}
-  #       uses: mxschmitt/action-tmate@v3
+      - name: Setup tmate session
+        if: ${{ failure() || ( github.event_name == 'workflow_dispatch' && inputs.tmate_enabled ) }}
+        uses: mxschmitt/action-tmate@v3
 
-  #     - name: Cleanup cluster
-  #       if: ${{ always() }}
-  #       run: |
-  #         ./helpers/k3s-cluster.sh --cleanup
+      - name: Cleanup cluster
+        if: ${{ always() }}
+        run: |
+          ./helpers/k3s-cluster.sh --cleanup
 
   test-minikube:
     name: Minikube Deployment
@@ -113,9 +113,9 @@ jobs:
         # Issue https://github.com/kontainapp/km/issues/1388
         runtime: ["containerd"]
         driver: ["docker", "podman"]
-        include:
-          - runtime: cri-o
-            driver: podman
+        # include:
+        #   - runtime: cri-o
+        #     driver: podman
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -200,33 +200,33 @@ jobs:
         run: |
           ./helpers/minikube-cluster.sh --cleanup
 
-  # test-gce:
-  #   name: GCE Deployment
-  #   runs-on: ubuntu-20.04
-  #   steps:
-  #     - name: Checkout
-  #       uses: actions/checkout@v2
+  test-gce:
+    name: GCE Deployment
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
 
-  #     - name: Authenticate to Google Cloud
-  #       uses: google-github-actions/auth@v0
-  #       with:
-  #         credentials_json: "${{ secrets.GOOGLE_CREDENTIALS }}"
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v0
+        with:
+          credentials_json: "${{ secrets.GOOGLE_CREDENTIALS }}"
 
-  #     - name: "Set up Cloud SDK"
-  #       uses: "google-github-actions/setup-gcloud@v0"
-  #       with:
-  #         install_components: gke-gcloud-auth-plugin, kubectl
+      - name: "Set up Cloud SDK"
+        uses: "google-github-actions/setup-gcloud@v0"
+        with:
+          install_components: gke-gcloud-auth-plugin, kubectl
 
-  #     - name: Make cluster
-  #       run: |
-  #         ./helpers/gce-cluster.sh --project=gke-suport --region=us-central1-a ci-deployment-test
-  #         echo "USE_GKE_GCLOUD_AUTH_PLUGIN=True" >> $GITHUB_ENV
+      - name: Make cluster
+        run: |
+          ./helpers/gce-cluster.sh --project=gke-suport --region=us-central1-a ci-deployment-test
+          echo "USE_GKE_GCLOUD_AUTH_PLUGIN=True" >> $GITHUB_ENV
 
-  #     - uses: ./.github/actions/deploy-kontain
+      - uses: ./.github/actions/deploy-kontain
 
-  #     - uses: ./.github/actions/test-app
+      - uses: ./.github/actions/test-app
 
-  #     - name: Cleanup cluster
-  #       if: ${{ always() }}
-  #       run: |
-  #         ./helpers/gce-cluster.sh --cleanup ci-deployment-test
+      - name: Cleanup cluster
+        if: ${{ always() }}
+        run: |
+          ./helpers/gce-cluster.sh --cleanup ci-deployment-test
