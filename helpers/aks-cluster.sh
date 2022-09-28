@@ -16,7 +16,7 @@
 
 [ "$TRACE" ] && set -x
 
-region=westus1
+region=westus3
 arg_count=$#
 
 print_help() {
@@ -30,7 +30,7 @@ print_help() {
     echo "--tenant AZURE tenant ID"
     echo "--app-id AZURE app id"
     echo "--password AZURE secret or password"
-    echo "--region Sets aws region. Default to westus1"
+    echo "--region Sets aws region. Default to westus3"
     echo "--cleanup Instructs script to delete cluster and all related resourses "
     exit 0
 }
