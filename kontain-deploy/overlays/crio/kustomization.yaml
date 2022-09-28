@@ -20,6 +20,7 @@ bases:
 patchesStrategicMerge:
   - runtime-config.yaml
   - runtime-restart.yaml
+  - pre-install.yaml
 
 configMapGenerator:
   - name: env-configmap
