@@ -17,7 +17,7 @@
 [ "$TRACE" ] && set -x
 
 print_help() {
-    echo "usage: $0 [options] prefix"
+    echo "usage: $0 [options]"
     echo "Creates k3s cluster"
     echo ""
     echo "-h,--help print this help"

@@ -27,16 +27,13 @@ data:
 
     [ "$TRACE" ] && set -x
 
-    # reading latest release artifact tag info from current_release.txt
-    TAG=${TAG:-$(curl -L -s https://raw.githubusercontent.com/kontainapp/km/current/km-releases/current_release.txt)}
-
-    KONTAIN_RELEASE_URL=${KONTAIN_RELEASE_URL:-"https://github.com/kontainapp/km/releases/download/${TAG}/kontain_bin.tar.gz"}
-
     # preserve nodes resolve.conf and use one from pod while in chroot
     cp ${ROOT_MOUNT_DIR}/etc/resolv.conf ${ROOT_MOUNT_DIR}/etc/resolv.conf.orig
-    cat /etc/resolv.conf >> ${ROOT_MOUNT_DIR}/etc/resolv.conf
+    cat /etc/resolv.conf > ${ROOT_MOUNT_DIR}/etc/resolv.conf
 
-    echo "Install Kontain Runtime Artifacts (KM & KRUN)"
+    chroot ${ROOT_MOUNT_DIR} /bin/bash -c /scripts-lib/pre-install.sh
+
+    # echo "Install Kontain Runtime Artifacts (KM & KRUN)"
     chroot ${ROOT_MOUNT_DIR} /bin/bash -c /scripts-lib/kontain-install-artifacts.sh
 
     echo "Configure Runtime"

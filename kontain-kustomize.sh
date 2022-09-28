@@ -30,7 +30,7 @@ custom_config=false
 command=apply
 
 function print_help() {
-    echo "usage: $0  [--deploy-version=version | --deploy-location=path] [--km-version=version | --km-url=url>] [--dry-run=strategy] [--download=path]"
+    echo "usage: $0  [--deploy-version=version | --deploy-location=path] [--km-version=version | --km-url=url] [--dry-run=strategy] [--download=path]"
     echo ""
     echo "Deploys all kustomizations necessary to Kontain-enable your cluster"
     echo ""
@@ -137,7 +137,7 @@ function prepare_overlay() {
 
 function prepare_km() {
     if [ -n "$km_tag" ] && [ -n "$km_url" ]; then
-        echo "Either --km-version or --km_url can be specified, but not both"
+        echo "Either --km-version or --km-url can be specified, but not both"
         exit 1;
     elif [ -n "$km_tag" ]; then 
         echo "TAG=$km_tag" > custom.properties

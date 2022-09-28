@@ -11,22 +11,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-apiVersion: kustomize.config.k8s.io/v1beta1
-kind: Kustomization
 
-bases:
-  - ../../base
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pre-install
+  namespace: kube-system
+  labels:
+    app: kontain-init
+data:
+  pre-install.sh: |
+    #!/usr/bin/env bash
 
-configMapGenerator:
-  - name: env-configmap
-    namespace: kube-system
-    behavior: merge
-    envs:
-      - config.properties
-    files:
-      - TOML_TEMPLATE=config.toml.tmpl
+    [ "$TRACE" ] && set -x
 
-patchesStrategicMerge:
-  - pre-install.yaml
-  - runtime-config.yaml
-  - runtime-restart.yaml
+    echo "overwrite pre-install in overlay  as needed"

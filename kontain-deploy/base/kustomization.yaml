@@ -16,6 +16,7 @@ kind: Kustomization
 
 resources:
   - entry-point.yaml
+  - pre-install.yaml
   - kontain-install-artifacts.yaml
   - runtime-config.yaml
   - runtime-restart.yaml

@@ -56,6 +56,9 @@ spec:
             - name: lib-kvm-kkm-install
               mountPath: /root/scripts-lib/kvm-kkm-install.sh
               subPath: kvm-kkm-install.sh
+            - name: lib-pre-install
+              mountPath: /root/scripts-lib/pre-install.sh
+              subPath: pre-install.sh
             - name: entrypoint
               mountPath: /scripts
       volumes:
@@ -84,4 +87,8 @@ spec:
         - name: lib-kvm-kkm-install
           configMap:
             name: kontain-kvm-kkm-install
+            defaultMode: 0744
+        - name: lib-pre-install
+          configMap:
+            name: pre-install
             defaultMode: 0744
