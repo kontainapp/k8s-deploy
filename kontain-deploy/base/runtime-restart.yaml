@@ -14,14 +14,12 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: kontain-containerd-restart
+  name: kontain-runtime-restart
   namespace: kube-system
   labels:
     app: kontain-init
 data:
-  containerd-restart.sh: |
+  runtime-restart.sh: |
     #!/usr/bin/env bash
 
-    echo "restart containerd"
-    systemctl daemon-reload
-    systemctl restart containerd
+    echo "can be overlayed as needed"

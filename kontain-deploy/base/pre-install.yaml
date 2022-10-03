@@ -11,17 +11,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: kontain-kkm-install-pre
+  name: pre-install
   namespace: kube-system
   labels:
     app: kontain-init
 data:
-  kkm-install-pre.sh: |
+  pre-install.sh: |
     #!/usr/bin/env bash
 
-    cp /root/etc/resolv.conf /root/etc/resolv.conf.orig
+    [ "$TRACE" ] && set -x
 
-    cat /etc/resolv.conf >> /root/etc/resolv.conf
+    echo "overwrite pre-install in overlay  as needed"

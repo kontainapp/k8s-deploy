@@ -15,14 +15,12 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: kontain-containerd-install
+  name: pre-install
   namespace: kube-system
   labels:
     app: kontain-init
 data:
-  containerd-config.sh: |
+  pre-install.sh: |
     #!/usr/bin/env bash
 
-    source /scripts-lib/containerd-cfg-get.sh
-    source /scripts-lib/containerd-cfg-update.sh
-    source /scripts-lib/containerd-restart.sh
+    [ "$TRACE" ] && set -x

@@ -14,12 +14,23 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: kontain-kkm-install-post
+  name: kontain-runtime-restart
   namespace: kube-system
   labels:
     app: kontain-init
 data:
-  kkm-install-post.sh: |
+  runtime-restart.sh: |-
     #!/usr/bin/env bash
 
-    mv /root/etc/resolv.conf.orig /root/etc/resolv.conf
+    [ "$TRACE" ] && set -x
+
+    # upgrade cri-o if necessary - bug in restart 
+    # we do it on node, so use chroot  
+    chroot ${ROOT_MOUNT_DIR} /usr/bin/env bash -c "$(cat <<EOT
+      apt-get update
+      apt-get upgrade cri-o --yes
+    EOT
+    )"
+
+    echo "restart crio after applying customization"
+    systemctl restart crio

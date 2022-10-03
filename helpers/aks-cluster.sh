@@ -20,8 +20,8 @@ region=westus3
 arg_count=$#
 
 print_help() {
-    echo "usage: $0  [options] prefix"
-    echo "Creates AKS cluster with the name <prefix>-aks-cluster. All other associated recource names are prefixes with <prefix> "
+    echo "usage: $0  --tenant=TENANT_ID --app-id=AZURE_APP_ID --password=AZURE_SECRET [--region=region] [--cleanup] prefix"
+    echo "Creates AKS cluster with the name <prefix>-aks-cluster. All other associated recource names are prefixed with <prefix> "
     echo ""
     echo "Prerequisites:"
     echo "  AZURE CLI"
@@ -30,7 +30,7 @@ print_help() {
     echo "--tenant AZURE tenant ID"
     echo "--app-id AZURE app id"
     echo "--password AZURE secret or password"
-    echo "--region Sets aws region. Default to us-west-1"
+    echo "--region Sets aws region. Default to westus3"
     echo "--cleanup Instructs script to delete cluster and all related resourses "
     exit 0
 }

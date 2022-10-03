@@ -11,15 +11,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: kontain-containerd-cfg-get
+  name: kontain-runtime-config
   namespace: kube-system
   labels:
     app: kontain-init
 data:
-  containerd-cfg-get.sh: |
+  runtime-config.sh: |
     #!/usr/bin/env bash
 
-    CONTAINERD_CFG_FULL_PATH=${ROOT_MOUNT_DIR}/${CONTAINERD_CFG_DIR}/${CONTAINERD_CFG_FILE}
+    echo "to be overlayed as needed"

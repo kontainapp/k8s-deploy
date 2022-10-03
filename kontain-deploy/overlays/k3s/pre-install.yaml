@@ -11,15 +11,30 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: kontain-containerd-cfg-update
+  name: pre-install
   namespace: kube-system
   labels:
     app: kontain-init
 data:
-  containerd-cfg-update.sh: |
+  pre-install.sh: |
     #!/usr/bin/env bash
 
-    echo "${TOML_TEMPLATE}" >> ${CONTAINERD_CFG_FULL_PATH}.tmpl
+    [ "$TRACE" ] && set -x
+
+    # ip netns add ns1
+    # ip link add ns1-namespaceIf type veth peer name ns1-rootIf
+    # ip link set ns1-namespaceIf up
+    # ip link set ns1-rootIf up
+    # ip link set ns1-namespaceIf netns ns1
+    # brctl addbr k3sbridge
+    # ip addr add dev k3sbridge 192.168.0.1/26
+    # ip link set k3sbridge up
+    # ip netns exec ns1 ip addr add dev ns1-namespaceIf 192.168.0.10/26
+    # ip netns exec ns1 ip link set ns1-namespaceIf up
+    # ip netns exec ns1 ip r add default via 192.168.0.1 dev ns1-namespaceIf
+    # iptables -t nat -A POSTROUTING -o eth0 -s 192.168.0.10 -j MASQUERADE
+    # brctl addif k3sbridge ns1-rootIf

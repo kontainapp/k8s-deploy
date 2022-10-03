@@ -27,15 +27,16 @@ strategy="none"
 input_errors=""
 clean_dir=false
 custom_config=false
+command=apply
 
 function print_help() {
-    echo "usage: $0  [--deploy-version=version | --deploy-location=path] [--km-version=version | --km-url=url>] [--dry-run=strategy] [--download=path]"
+    echo "usage: $0  [--deploy-version=version | --deploy-location=path] [--km-version=version | --km-url=url] [--dry-run=strategy] [--download=path]"
     echo ""
     echo "Deploys all kustomizations necessary to Kontain-enable your cluster"
     echo ""
     echo "Options:"
     echo "  --deploy-version=<tag> - Kontain Deployment version to use. Defaults to current release"
-    echo "  --deploy-location=<deployment location> - location of kontain-deploy directory"
+    echo "  --deploy-location=<deployment location> - location of kontain-deploy local directory"
     echo "  --km-version=<tag> - Kontain release to deploy. Defaults to current Kontain release"
     echo "  --km-url=<url> - url to download kontain_bin.tar.gz. Development only"
     echo "*** Note: only --release-tag or --location maybe specified but not both. "
@@ -44,7 +45,8 @@ function print_help() {
     echo "  --help(-h) - prints this message"
     echo "  --dry-run=<strategy> If 'review' strategy, only generate resulting customization file. If 'client' strategy, only print the object that would be sent, without 
 	sending it. If 'server' strategy, submit server-side request without persisting the resource."
-    echo "  --download=<path> - downloads kontain-deploy directory structure to specified location. After script completion overlay file tree can be found in this directory."
+    echo "  --download=<path> - downloads kontain-deploy directory structure to specified location. After script completion overlay file tree can be found in this directory. If needed, directory will be created"
+    echo "  --remove - removes all the resources produced by overlay"
     exit 1
 }
 
@@ -135,7 +137,7 @@ function prepare_overlay() {
 
 function prepare_km() {
     if [ -n "$km_tag" ] && [ -n "$km_url" ]; then
-        echo "Either --km-version or --km_url can be specified, but not both"
+        echo "Either --km-version or --km-url can be specified, but not both"
         exit 1;
     elif [ -n "$km_tag" ]; then 
         echo "TAG=$km_tag" > custom.properties
@@ -176,6 +178,9 @@ do
             read_parameter "${1}"
             download_dir="${func_retval}"
         ;;
+        --remove)
+            command=delete
+        ;;
         --help | -h)
             print_help
         ;;
@@ -202,9 +207,17 @@ prepare_km
 prepare_overlay
 overlay_dir="${func_retval}"
 
+if [ -n "$download_dir" ]; then
+    #download requested - no application
+    exit
+fi
+
 cloud_provider=$(kubectl get nodes -ojson | jq -r '.items[0] | .spec | .providerID ' | cut -d':' -f1)
 if [ "$cloud_provider" = null ]; then
-    cloud_provider=$(kubectl get node -ojson | jq -r '.items[0] | .metadata | .name')
+    cloud_provider=$(kubectl get namespaces -ojson |jq -r '.items[] | .metadata | select(.name=="openshift").name')
+    if [ -z "$cloud_provider" ]; then 
+        cloud_provider=$(kubectl get node -ojson | jq -r '.items[0] | .metadata | .name')
+    fi    
 fi
 os=$(kubectl get nodes -ojson | jq -r '.items[0] | .status | .nodeInfo | .osImage')
 runtime=$(kubectl get node -ojson | jq -r '.items[0] | .status | .nodeInfo | .containerRuntimeVersion')
@@ -223,20 +236,32 @@ elif [ "$cloud_provider" = "gce" ]; then
     fi
 elif [ "$cloud_provider" = "k3s" ]; then
     overlay=k3s
-    post_process="echo 'Make sure to restart k3s by using the following command\n\tsudo systemctl restart k3s'"
+    post_process="echo -e 'Make sure to restart k3s by using the following command\n\tsudo systemctl restart k3s'"
 elif [ "$cloud_provider" = "minikube" ]; then
+    driver=$(minikube profile list -o json | jq -r '.valid[0]|.Config|.Driver')
     if [[ $runtime =~ crio* ]]; then 
         overlay=crio
     elif [[ $runtime =~ containerd ]]; then 
         overlay=containerd
     else
         echo "Unsupported runtime"
+        exit 1
     fi
+elif [ "$cloud_provider" = "openshift" ]; then
+    echo "In OpenShift"
+    overlay=containerd
 else
     echo "Unrecognized cluster provider $cloud_provider."
     echo ""
     echo "If you running K3s make sure to set export KUBECONFIG=/etc/rancher/k3s/k3s.yaml"
     exit 1
+fi
+
+config_file=${overlay_dir}/../base/config.properties
+if grep -q "K8S_FLAVOUR=" ${config_file}; then
+    sed -i "s/\(K8S_FLAVOUR=\)\(.*\)/\1$cloud_provider/" ${config_file}
+else
+    echo -e "\nK8S_FLAVOUR=$cloud_provider" >> ${config_file}
 fi
 
 overlay_dir=${overlay_dir}/${overlay}
@@ -247,13 +272,12 @@ if [ "$strategy" = "review" ]; then
     exit
 fi
 
-kubectl apply --dry-run="$strategy" -f "${kontain_yaml}"
+kubectl "$command" --dry-run="$strategy" -f "${kontain_yaml}"
 
 if [ "$strategy" == "none" ]; then 
-    pod=$(kubectl get pods -A -ojson | jq -r '.items[] | .metadata | .name |select(. | startswith("kontain") )')
-
     echo "waiting for kontain deamonset to be running"
-    kubectl wait --for=condition=Ready pod/"$pod" -n kube-system
+    
+    kubectl wait --for=condition=Ready pods -n kube-system -l app=kontain-init
 
     eval ${post_process}
 fi

@@ -11,17 +11,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-apiVersion: apps/v1
-kind: DaemonSet
+apiVersion: v1
+kind: ConfigMap
 metadata:
-  name: kontain-node-initializer
+  name: kontain-runtime-restart
   namespace: kube-system
-spec:
-  template:
-    spec:
-      containers:
-        - name: node-initializer
-          env:
-            - name: KONTAIN_RELEASE_URL
-              value: http://host.minikube.internal:8000/kontain_bin.tar.gz
+data:
+  runtime-restart.sh: |-
+    #!/usr/bin/env bash
+
+    [ "$TRACE" ] && set -x
+
+    echo "make sure to restart K3s after kustomization has completed"

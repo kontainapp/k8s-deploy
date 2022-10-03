@@ -30,7 +30,7 @@ print_help() {
     echo ""
     echo "-h,--help print this help"
     echo "--region Sets aws region. Default to us-west-1"
-    echo "--ami Kontain-anabled AMI id. Required to create cluster"
+    echo "--ami Kontain-enabled AMI id. Required to create cluster"
     echo "--cleanup Instructs script to delete cluster and all related resourses "
     exit 0
 }

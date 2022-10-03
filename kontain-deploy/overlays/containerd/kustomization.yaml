@@ -18,6 +18,10 @@ kind: Kustomization
 bases:
   - ../../base
 
+patchesStrategicMerge:
+  - runtime-config.yaml
+  - runtime-restart.yaml
+
 configMapGenerator:
   - name: env-configmap
     namespace: kube-system
