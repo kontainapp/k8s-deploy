@@ -46,7 +46,7 @@ do_cleanup() {
 
 print_help() {
     echo "usage: $0  [OPTIONS | --cleanup]"
-    echo "Creates minicube cluster"
+    echo "Creates minishift cluster"
     echo ""
     echo "Prerequisites:"
     echo "  "
