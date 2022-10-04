@@ -28,12 +28,27 @@ jobs:
           tag_name: ${{ github.ref }}
           release_name: Release ${{ github.ref }}
           body: |
-            Changes in this Release
-            - First Change
-            - Second Change
+            {{ github.event.head_commit.message }}
           draft: false
           prerelease: false
 
-      - name: Tag Current
-        run: |
-          make tag-release TAG=current
+      - name: Advance nightly tag
+        uses: actions/github-script@v3
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
+          script: |
+            try {
+                await github.git.deleteRef({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  ref: "tags/current"
+                })
+            } catch (e) {
+              console.log("The current tag doesn't exist yet: " + e)
+            }
+            await github.git.createRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: "refs/tags/current",
+              sha: context.sha
+            })
