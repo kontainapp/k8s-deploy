@@ -28,6 +28,7 @@ input_errors=""
 clean_dir=false
 custom_config=false
 command=apply
+download_only=false
 
 function print_help() {
     echo "usage: $0  [--deploy-version=version | --deploy-location=path] [--km-version=version | --km-url=url] [--dry-run=strategy] [--download=path]"
@@ -55,7 +56,7 @@ function cleanup() {
         rm -rf "$download_dir"
     elif [ $custom_config = true ]; then
         # restore original environment file
-        mv "${location}"/../../base/config.properties~ "${location}"/../../base/config.properties
+        mv "${overlay_dir}"/../../base/config.properties~ "${overlay_dir}"/../../base/config.properties
     fi
 }
 
@@ -142,10 +143,12 @@ function prepare_km() {
     elif [ -n "$km_tag" ]; then 
         echo "TAG=$km_tag" > custom.properties
         echo "KONTAIN_RELEASE_URL=" >> custom.properties
+        echo "TRACE=yes"  >> custom.properties
         custom_config=true
     elif [ -n "$km_url" ]; then
         echo "TAG=" > custom.properties
         echo "KONTAIN_RELEASE_URL=$km_url" >> custom.properties
+        echo "TRACE=yes" >> custom.properties
         custom_config=true
     fi
 
@@ -177,6 +180,7 @@ do
         --download*)
             read_parameter "${1}"
             download_dir="${func_retval}"
+            download_only=true
         ;;
         --remove)
             command=delete
@@ -207,7 +211,7 @@ prepare_km
 prepare_overlay
 overlay_dir="${func_retval}"
 
-if [ -n "$download_dir" ]; then
+if [ $download_only = true ]; then
     #download requested - no application
     exit
 fi
@@ -274,9 +278,9 @@ fi
 
 kubectl "$command" --dry-run="$strategy" -f "${kontain_yaml}"
 
-if [ "$strategy" == "none" ]; then 
+if [ "$strategy" == "none" ] && [ "$command" == "apply" ]; then 
     echo "waiting for kontain deamonset to be running"
-    
+     
     kubectl wait --for=condition=Ready pods -n kube-system -l app=kontain-init
 
     eval ${post_process}
