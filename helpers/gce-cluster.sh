@@ -17,11 +17,11 @@
 
 [ "$TRACE" ] && set -x
 
-region=us-central1-a
+region=us-central1-c
 arg_count=$#
 
 print_help() {
-    echo "usage: $0  [options] --project=<project id> prefix"
+    echo "usage: $0  [  --project=<project id> [--key-file=file] [--region=region] | --cleanup ] prefix "
     echo "Creates AKS cluster with the name <prefix>-aks-cluster. All other associated recource names are prefixes with <prefix> "
     echo ""
     echo "Prerequisites:"
@@ -32,7 +32,7 @@ print_help() {
     echo "-h,--help print this help"
     echo "--project project id"
     echo "--key-file path to file containing your key"
-    echo "--region Sets aws region. Default to us-central1-a"
+    echo "--region Sets aws region. Default to us-central1-c"
     echo "--cleanup Instructs script to delete cluster and all related resourses "
     exit 0
 }
@@ -87,27 +87,27 @@ do_cleanup() {
 
 main() {
 
-    set -x
     # if key file provided - authenticate with google cloud, otherwise assume it has already been done  
     if [ -n "${key_file}" ]; then
         gcloud auth activate-service-account --key-file "${key_file}"
     fi
 
-    #Set our current project context
-    gcloud config set project "${project_name}"
-
     #Enable GKE services in our current project
     gcloud services enable container.googleapis.com
 
+    subnet_zone=$(echo "$region" | sed  's/\-[^-]*$//')
     #Tell GKE to create a single zone, single node cluster for us. 
-    gcloud container clusters create "${cluster_name}" --region "${region}" --num-nodes=1 --image-type=UBUNTU_CONTAINERD
+    gcloud container --project="${project_name}" clusters create "${cluster_name}" \
+        --zone="${region}" --image-type="UBUNTU_CONTAINERD" --num-nodes=1 \
+        --enable-ip-alias \
+        --network="projects/${project_name}/global/networks/default" \
+        --subnetwork="projects/${project_name}/regions/${subnet_zone}/subnetworks/default"
 
-    export USE_GKE_GCLOUD_AUTH_PLUGIN=True
-    
-    gcloud container clusters get-credentials "${cluster_name}" --region "${region}"
+    gcloud container clusters get-credentials "${cluster_name}" --region "${region}"        
+
 }
 
-if [ -n "$cleanup" ] && [ $arg_count == 1 ]; then
+if [ -n "$cleanup" ] && [ $arg_count = 1 ]; then
     do_cleanup
     exit
 fi
