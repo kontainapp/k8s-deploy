@@ -143,7 +143,7 @@ function prepare_km() {
     elif [ -n "$km_tag" ]; then 
         echo "TAG=$km_tag" > custom.properties
         echo "KONTAIN_RELEASE_URL=" >> custom.properties
-        echo "TRACE=yes"  >> custom.properties
+        echo "TRACE=yes" >> custom.properties
         custom_config=true
     elif [ -n "$km_url" ]; then
         echo "TAG=" > custom.properties

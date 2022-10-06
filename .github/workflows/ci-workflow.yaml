@@ -219,8 +219,12 @@ jobs:
 
       - name: Make cluster
         run: |
-          ./helpers/gce-cluster.sh --project=gke-suport --region=us-central1-a ci-deployment-test
+          ./helpers/gce-cluster.sh --project=gke-suport ci-deployment-test
           echo "USE_GKE_GCLOUD_AUTH_PLUGIN=True" >> $GITHUB_ENV
+          echo "Make sure cluster up and running"
+          gcloud container clusters list
+          echo "kubectl accessible - node running "
+          kubectl get nodes
 
       - uses: ./.github/actions/deploy-kontain
 
