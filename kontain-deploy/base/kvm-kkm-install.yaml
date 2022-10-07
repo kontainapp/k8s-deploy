@@ -43,8 +43,6 @@ data:
       if [ -n "$permissions" ]; then 
         mount -o remount,rw "$mount_point"
       fi
-      cp ${ROOT_MOUNT_DIR}/${KONTAIN_ARTIFACT_DIR}/kkm.run ${ROOT_MOUNT_DIR}/${OPT_KONTAIN}/bin/kkm.run 
-      chmod +x ${ROOT_MOUNT_DIR}/${OPT_KONTAIN}/bin/kkm.run
       chroot ${ROOT_MOUNT_DIR}/ ${OPT_KONTAIN}/bin/kkm.run --target ${OPT_KONTAIN}/bin/kkm-installer --noprogress -- --force-install 
       rm -rf ${ROOT_MOUNT_DIR}/${OPT_KONTAIN}/bin/kkm-installer
       if [ "$K8S_FLAVOUR" = "minikube" ]; then
@@ -53,5 +51,4 @@ data:
         mknod ${ROOT_MOUNT_DIR}/dev/kkm c $major $minor
         chmod 666 ${ROOT_MOUNT_DIR}/dev/kkm
       fi
-
     fi

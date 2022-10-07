@@ -30,23 +30,34 @@ data:
 
     KONTAIN_RELEASE_URL=${KONTAIN_RELEASE_URL:-"https://github.com/kontainapp/km/releases/download/${TAG}/kontain_bin.tar.gz"}
 
-    echo "tag = ${TAG}"
-    echo "url = ${KONTAIN_RELEASE_URL}"
+    mkdir -p ${OPT_KONTAIN}
+    curl -L "${KONTAIN_RELEASE_URL}" | tar -xzf - -C ${OPT_KONTAIN}
 
-    mkdir -p ${KONTAIN_ARTIFACT_DIR}
-    curl -L "${KONTAIN_RELEASE_URL}" | tar -xzf - -C ${KONTAIN_ARTIFACT_DIR}
+    ls -R ${OPT_KONTAIN}
 
-    mkdir -p ${OPT_KONTAIN}/bin
+    # fall back to old way of building kontain_bin.tar.gz
+    if [ ! -f ${OPT_KONTAIN}/bin/km ]; then
+      mv ${OPT_KONTAIN}/km/km ${OPT_KONTAIN}/bin/km
+    fi
 
-    cp ${KONTAIN_ARTIFACT_DIR}/km/km ${OPT_KONTAIN}/bin/km
+    if [ ! -f ${OPT_KONTAIN}/bin/krun ]; then
+      mv ${OPT_KONTAIN}/container-runtime/krun ${OPT_KONTAIN}/bin/krun
+      mv ${OPT_KONTAIN}/container-runtime/krun-label-trigger ${OPT_KONTAIN}/bin/krun-label-trigger
+      rm -rf ${OPT_KONTAIN}/container-runtime
+    fi
+    if [ ! -f ${OPT_KONTAIN}/shim/containerd-shim-krun-v2 ]; then 
+      mkdir -p ${OPT_KONTAIN}/shim
+      mv ${OPT_KONTAIN}/cloud/k8s/deploy/shim/containerd-shim-krun-v2 ${OPT_KONTAIN}/shim/containerd-shim-krun-v2
+      rm -rf ${OPT_KONTAIN}/cloud
+    fi
+    if [ ! -f ${OPT_KONTAIN}/bin/kkm.run ]; then 
+      mv ${OPT_KONTAIN}/kkm.run ${OPT_KONTAIN}/bin/kkm.run
+    fi
+
+    # make all files executable
     chmod +x ${OPT_KONTAIN}/bin/km
-
-    cp ${KONTAIN_ARTIFACT_DIR}/bin/km_cli ${OPT_KONTAIN}/bin/km_cli
     chmod +x ${OPT_KONTAIN}/bin/km_cli
-
-    cp ${KONTAIN_ARTIFACT_DIR}/container-runtime/krun ${OPT_KONTAIN}/bin/krun
     chmod +x ${OPT_KONTAIN}/bin/krun
-
-    mkdir -p ${OPT_KONTAIN}/shim
-    cp ${KONTAIN_ARTIFACT_DIR}/cloud/k8s/deploy/shim/containerd-shim-krun-v2 ${OPT_KONTAIN}/shim/containerd-shim-krun-v2
+    chmod +x ${OPT_KONTAIN}/bin/krun-label-trigger
     chmod +x ${OPT_KONTAIN}/shim/containerd-shim-krun-v2
+    chmod +x ${OPT_KONTAIN}/bin/kkm.run

@@ -48,8 +48,5 @@ data:
     # restore resolve.conf after completing chroot 
     cp ${ROOT_MOUNT_DIR}/etc/resolv.conf.orig ${ROOT_MOUNT_DIR}/etc/resolv.conf
 
-    # clean up directories 
-    rm -rf ${KONTAIN_ARTIFACT_DIR}
-
     echo "kontain-init completed"
     sleep infinity

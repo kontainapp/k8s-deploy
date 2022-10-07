@@ -29,5 +29,5 @@ data:
     echo "${TOML_TEMPLATE}"  > "${CONTAINERD_CFG_FULL_PATH}"
 
     # copy SHIM
-    cp ${KONTAIN_ARTIFACT_DIR}/cloud/k8s/deploy/shim/containerd-shim-krun-v2 ${SHIM_DIR}/containerd-shim-krun-v2
+    cp ${OPT_KONTAIN}/shim/containerd-shim-krun-v2 ${SHIM_DIR}/containerd-shim-krun-v2
     chmod +x ${SHIM_DIR}/containerd-shim-krun-v2
