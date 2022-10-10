@@ -48,5 +48,34 @@ data:
     # restore resolve.conf after completing chroot 
     cp ${ROOT_MOUNT_DIR}/etc/resolv.conf.orig ${ROOT_MOUNT_DIR}/etc/resolv.conf
 
+    # Now update node's label to make it available to kontain deployments
+
+    # Point to the internal API server hostname
+    APISERVER=https://kubernetes.default.svc
+
+    # Path to ServiceAccount token
+    SERVICEACCOUNT=/var/run/secrets/kubernetes.io/serviceaccount
+
+    # Read this Pod's namespace
+    NAMESPACE=$(cat ${SERVICEACCOUNT}/namespace)
+
+    # Read the ServiceAccount bearer token
+    TOKEN=$(cat ${SERVICEACCOUNT}/token)
+
+    # Reference the internal certificate authority (CA)
+    CACERT=${SERVICEACCOUNT}/ca.crt
+
+    # my node name
+    echo "MY NODE NAME = $MY_NODE_NAME"
+
+    curl --cacert ${CACERT} --header "Authorization: Bearer ${TOKEN}" -k -v \
+      -H "Accept: application/json" \
+      -XPATCH -d '{"metadata":{"labels":{"sandbox":"kontain"}}}' \
+      -H "Content-Type: application/merge-patch+json" \
+      ${APISERVER}/api/v1/nodes/${MY_NODE_NAME} > /dev/null
+
     echo "kontain-init completed"
+    mkdir -p /opt/kontain/config
+    touch /opt/kontain/config/complete
+
     sleep infinity

@@ -12,8 +12,10 @@ spec:
         kontain: test-app
     spec:
       runtimeClassName: kontain
+      nodeSelector:
+        sandbox: kontain
       containers:
-      - name: kontain-test-app
-        image: busybox:latest
-        command: [ "sleep", "infinity" ]
-        imagePullPolicy: IfNotPresent
+        - name: kontain-test-app
+          image: busybox:latest
+          command: ["sleep", "infinity"]
+          imagePullPolicy: IfNotPresent
