@@ -107,3 +107,4 @@ spec:
           configMap:
             name: pre-install
             defaultMode: 0744
+      serviceAccountName: kontain-serviceaccount
