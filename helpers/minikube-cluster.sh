@@ -105,7 +105,7 @@ do_restart() {
         minikube start
     elif [ "$driver" = 'podman' ]; then
         do_cleanup
-        minikube start --container-runtime="$runtime" --driver="$driver" --wait=all --logtostderr=true  --wait-timeout=10m0s --force-systemd=true
+        minikube start --container-runtime="$runtime" --driver="$driver" --wait=all --logtostderr=true --force-systemd=true
     fi
 }
 
