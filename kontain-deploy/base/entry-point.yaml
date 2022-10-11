@@ -72,7 +72,13 @@ data:
       -H "Accept: application/json" \
       -XPATCH -d '{"metadata":{"labels":{"sandbox":"kontain"}}}' \
       -H "Content-Type: application/merge-patch+json" \
-      ${APISERVER}/api/v1/nodes/${MY_NODE_NAME} > /dev/null
+      ${APISERVER}/api/v1/nodes/${MY_NODE_NAME} > out.json
+
+    if ! grep --quiet '"sandbox": "kontain"' out.json ; then 
+      echo "Node labeling failed. Make sure your kubernetes service account has sufficient permissions"
+      cat out.json
+      exit 1
+    fi
 
     echo "kontain-init completed"
     mkdir -p /opt/kontain/config
