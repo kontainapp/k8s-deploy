@@ -203,7 +203,6 @@ jobs:
   test-gce:
     name: GCE Deployment
     runs-on: ubuntu-20.04
-    #needs: [test-aks]
     steps:
       - name: Checkout
         uses: actions/checkout@v2
