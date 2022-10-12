@@ -34,6 +34,11 @@ spec:
         - image: centos:7 # ubuntu:18.04
           name: node-initializer
           command: ["/scripts/entrypoint.sh"]
+          env:
+            - name: MY_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
           envFrom:
             - configMapRef:
                 name: env-configmap
@@ -61,6 +66,16 @@ spec:
               subPath: pre-install.sh
             - name: entrypoint
               mountPath: /scripts
+          readinessProbe:
+            initialDelaySeconds: 1
+            periodSeconds: 5
+            timeoutSeconds: 1
+            successThreshold: 1
+            failureThreshold: 1
+            exec:
+              command:
+                - cat
+                - /opt/kontain/config/complete
       volumes:
         - name: root-mount
           hostPath:
@@ -92,3 +107,4 @@ spec:
           configMap:
             name: pre-install
             defaultMode: 0744
+      serviceAccountName: kontain-serviceaccount

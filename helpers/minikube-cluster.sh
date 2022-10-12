@@ -75,7 +75,7 @@ create_cluster() {
         extra_options="--preload=false"
     fi
     
-    minikube start --container-runtime="$runtime" --driver="$driver" "$extra_options" --wait=all --logtostderr=true  --wait-timeout=10m0s
+    minikube start --container-runtime="$runtime" --driver="$driver" "$extra_options" --wait=all --logtostderr=true --force-systemd=true --wait-timeout=10m0s
 
     status=$(minikube status -ojson |jq -r '.APIServer')
     while [ $status != 'Running' ]
@@ -105,7 +105,7 @@ do_restart() {
         minikube start
     elif [ "$driver" = 'podman' ]; then
         do_cleanup
-        minikube start --container-runtime="$runtime" --driver="$driver" --wait=all --logtostderr=true  --wait-timeout=10m0s
+        minikube start --container-runtime="$runtime" --driver="$driver" --wait=all --logtostderr=true --force-systemd=true
     fi
 }
 

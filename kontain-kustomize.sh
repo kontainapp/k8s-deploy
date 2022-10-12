@@ -281,7 +281,7 @@ kubectl "$command" --dry-run="$strategy" -f "${kontain_yaml}"
 if [ "$strategy" == "none" ] && [ "$command" == "apply" ]; then 
     echo "waiting for kontain deamonset to be running"
      
-    kubectl wait --for=condition=Ready pods -n kube-system -l app=kontain-init
+    kubectl wait --for=condition=Ready pods -n kube-system -l app=kontain-init --timeout=120s
 
     eval ${post_process}
 fi

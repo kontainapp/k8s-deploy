@@ -219,7 +219,7 @@ jobs:
 
       - name: Make cluster
         run: |
-          ./helpers/gce-cluster.sh --project=gke-suport ci-deployment-test
+          ./helpers/gce-cluster.sh --project=gke-suport ci-deployment-test-gke
           echo "USE_GKE_GCLOUD_AUTH_PLUGIN=True" >> $GITHUB_ENV
           echo "Make sure cluster up and running"
           gcloud container clusters list
@@ -230,7 +230,11 @@ jobs:
 
       - uses: ./.github/actions/test-app
 
+      - name: Setup tmate session
+        if: ${{ failure() || ( github.event_name == 'workflow_dispatch' && inputs.tmate_enabled ) }}
+        uses: mxschmitt/action-tmate@v3
+
       - name: Cleanup cluster
         if: ${{ always() }}
         run: |
-          ./helpers/gce-cluster.sh --cleanup ci-deployment-test
+          ./helpers/gce-cluster.sh --cleanup ci-deployment-test-gke

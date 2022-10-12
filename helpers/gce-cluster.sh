@@ -97,11 +97,9 @@ main() {
 
     subnet_zone=$(echo "$region" | sed  's/\-[^-]*$//')
     #Tell GKE to create a single zone, single node cluster for us. 
-    gcloud container --project="${project_name}" clusters create "${cluster_name}" \
+    gcloud container clusters create "${cluster_name}" --project="${project_name}"  \
         --zone="${region}" --image-type="UBUNTU_CONTAINERD" --num-nodes=1 \
-        --enable-ip-alias \
-        --network="projects/${project_name}/global/networks/default" \
-        --subnetwork="projects/${project_name}/regions/${subnet_zone}/subnetworks/default"
+        --enable-ip-alias
 
     gcloud container clusters get-credentials "${cluster_name}" --region "${region}"        
 
