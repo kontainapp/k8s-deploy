@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/name: load-balancer-example
+  name: hello-world
+spec:
+  replicas: 5
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: load-balancer-example
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: load-balancer-example
+    spec:
+      runtimeClassName: kontain
+      nodeSelector:
+        sandbox: kontain
+      containers:
+        - image: docker.io/ezleka/node_test
+          name: hello-world
+          ports:
+            - containerPort: 8080
