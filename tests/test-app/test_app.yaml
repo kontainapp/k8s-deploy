@@ -18,7 +18,7 @@ spec:
       nodeSelector:
         sandbox: kontain
       containers:
-        - image: docker.io/ezleka/node_test
+        - image: kontaintests.azurecr.io/snapshot-test
           name: hello-world
           ports:
             - containerPort: 8080

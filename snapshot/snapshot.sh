@@ -16,35 +16,35 @@
 
 [ "$TRACE" ] && set -x
 
-SNAPREPO=ezleka
-
 KONTAIN_NAMESPACE="kontain-snapshot-ns"
 TARGET_POD_NAME="kontain-snaphot-target"
 MAKER_POD_NAME="kontain-snapshot-maker"
 
-SNAPSHOT_YAMLFILE=snapshot-maker.yaml
-# Files we derive for modifications
-POD_YAMLFILE=pod-original.yaml
-TARGET_POD_YAML=kontain-target.yaml
-MAKER_POD_YAML=kontain-maker.yaml
+SOURCE=${BASH_SOURCE[0]}
+while [ -L "$SOURCE" ]; do # resolve $SOURCE until the file is no longer a symlink
+  DIR=$( cd -P "$( dirname "$SOURCE" )" >/dev/null 2>&1 && pwd )
+  SOURCE=$(readlink "$SOURCE")
+  [[ $SOURCE != /* ]] && SOURCE=$DIR/$SOURCE # if $SOURCE was a relative symlink, we need to resolve it relative to the path where the symlink file was located
+done
+DIR=$( cd -P "$( dirname "$SOURCE" )" >/dev/null 2>&1 && pwd )
 
-SNAP_DOCKER_FILE=kmsnap.dockerfile
+SNAPSHOT_YAMLFILE=$DIR/snapshot-maker.yaml
+# Files we derive for modifications
+POD_YAMLFILE=$DIR/pod-original.yaml
+TARGET_POD_YAML=$DIR/kontain-target.yaml
+MAKER_POD_YAML=$DIR/kontain-maker.yaml
+MAKER_POD_ENTRYPOINT_YAML=$DIR/snapshot_entrypoint.yaml
+
+SNAP_DOCKER_FILE=$DIR/kmsnap.dockerfile
 # Snapshot directory names.  In the container and outside the container
 # What happens when we don't run this on the kubernetes node running the deployment?
 SNAPDIR_HOST=/tmp/kontain-snapdir-$$
 SNAPDIR_CONTAINER=/tmp/kontain-snapdir
-IMAGE_DIR=./image
-
-# Get yq
-YQ=./yq
-if [ ! -f yq ] && [ ! -x yq ]; then 
-    curl -o yq -L  https://github.com/mikefarah/yq/releases/download/v4.28.1/yq_linux_amd64
-    chmod +x yq
-fi
+IMAGE_DIR=$DIR/image
 
 function cleanup() {
     echo "Cleaning up"
-    # cleean up all our staff 
+    # clean up all our stuff 
     kubectl delete namespace $KONTAIN_NAMESPACE >& /dev/null
     rm $POD_YAMLFILE >& /dev/null
     rm $TARGET_POD_YAML >& /dev/null
@@ -55,44 +55,28 @@ function cleanup() {
 }
 
 function print_help() {
-    echo "usage: $0  "
+    echo "usage: $0  deployment-name"
     echo ""
-    echo "XXXX"
+    echo "Create snapshot of a deployment pod and apply if needed. "
+    echo "Environment variable KONTAIN_SNAPSHOT_REGISTRY must be set prior to calling script in the format"
+    echo " registry/account "
+    echo " For example, export KONTAIN_SNAPSHOT_REGISTRY=docker.io/kontainapp."
+    echo "If repository is private, make sure to login prior to calling the script"
     echo ""
     echo "Options:"
-    echo "  --deployment-name Name of the deployment as printed by command \
+    echo "  deployment-name Name of the deployment as printed by command \
                 kubectl get deployments"
-    echo "  --dockerhub-account name of dockerhub account"
-    echo "  --docker-uname"
-    echo "  --docker-passfile"
     exit 1
 }
 
-for arg in "$@"
-do
-   case "$arg" in
-        --deployment-name=*)
-            deployment_name="${1#*=}"
-        ;;
-        --dockerhub-account=*)
-            SNAPREPO=${1#*=}
-        ;;
-        --docker-uname=*)
-            docker_uname="${1#*=}"
-        ;;
-        --docker-passfile=*)
-            docker_passfile="${1#*=}"
-        ;;
-    esac
-    shift
-done
-
-if [ -z "$deployment_name" ]; then 
-    echo "Deployment name it required"
-    exit 1;
-fi
-
-trap cleanup EXIT
+function load_tools() {
+    # Get yq
+    YQ=$DIR/yq
+    if [ ! -f $YQ ] && [ ! -x $YQ ]; then 
+        curl -o $YQ -L  https://github.com/mikefarah/yq/releases/download/v4.28.1/yq_linux_amd64
+        chmod +x YQ
+    fi
+}
 
 function add_envs()
 {    
@@ -149,7 +133,7 @@ function get_pod() {
 
     kubectl get pod $pod -o yaml > $POD_YAMLFILE
 
-    #read image the pod was created from
+    # read image the pod was created from
     IMAGE_NAME=$($YQ '.spec.containers[].image' $POD_YAMLFILE)
     NODE_NAME=$($YQ '.spec.nodeName' $POD_YAMLFILE)
     CONTAINER_NAME=$($YQ '.spec.containers[].name' $POD_YAMLFILE)
@@ -239,7 +223,7 @@ function prepare_snapshot_pod() {
     # assign pod to specific node
     set_node_selector $MAKER_POD_YAML
 
-    kubectl apply -f snapshot_entrypoint.yaml >& /dev/null
+    kubectl apply -f $MAKER_POD_ENTRYPOINT_YAML >& /dev/null
     kubectl apply -f $MAKER_POD_YAML >& /dev/null
 
     # wait for manager pod  to be ready, i.e untill snapshot is made 
@@ -273,56 +257,97 @@ COPY $SNAPFILE /kmsnap
 CMD ["/kmsnap"]
 EOF
 
-    SNAP_IMAGE_NAME=$SNAPREPO/$(basename $IMAGE_NAME)_snap:latest
+    
+    SNAP_IMAGE_NAME=$KONTAIN_SNAPSHOT_REGISTRY/$(basename "${IMAGE_NAME%%:*}")_snap
 
     chown $(id -u):$(id -g) $IMAGE_DIR/$SNAPFILE
     chmod 755 $IMAGE_DIR/$SNAPFILE
 
-    docker build -t $SNAP_IMAGE_NAME -f kmsnap.dockerfile $IMAGE_DIR >& /dev/null
-
+    result=$(docker build -t $SNAP_IMAGE_NAME -f $SNAP_DOCKER_FILE $IMAGE_DIR  2>&1 > /dev/null)
+    if [ $? != 0 ]; then
+        echo "Failed to build snapshot image"
+        echo "docker: $result"
+        exit 1
+    fi
     echo "done"
 }
 
 function upload_image() {
     echo -n "Uploading image to dockerhub....."
 
-    if [ -n "$docker_uname" ]; then
-        cat $docker_passfile | docker login --username $docker_uname --password-stdin
-    fi;
-
-    docker push $SNAP_IMAGE_NAME >& /dev/null
-
-    echo "Image $SNAP_IMAGE_NAME has been created"
+    result=$(docker push $SNAP_IMAGE_NAME 2>&1 > /dev/null)
+    if [ $? != 0 ]; then
+        echo "Failed to push image to the repository"
+        echo "Make sure container registry $KONTAIN_SNAPSHOT_REGISTRY exists and you are logged into it with necessary permissions"
+        echo "docker: $result"
+        exit 1
+    fi    
+    echo "Image $SNAP_IMAGE_NAME has been uploaded"
 
 }
 function update_pods() {
 
     echo -n "Updating deployment with new image....."
 
-    kubectl set image deployment.apps/$deployment_name  $CONTAINER_NAME=docker.io/ezleka/node_test_snap >& /dev/null
+    kubectl set image deployment.apps/$deployment_name  $CONTAINER_NAME=$SNAP_IMAGE_NAME >& /dev/null
     
     echo "done"
 }
 
-kubectl create namespace $KONTAIN_NAMESPACE >& /dev/null
+function main() {
 
-get_pod
-prepare_pod
-prepare_snapshot_pod
-make_image
-upload_image 
+    load_tools
 
-echo "Do you wish to update relevant pods?"
-select yn in "Yes" "No"; do
-    case $yn in
-        Yes )
-        update_pods 
-        exit
+    kubectl create namespace $KONTAIN_NAMESPACE >& /dev/null
+
+    get_pod
+    prepare_pod
+    prepare_snapshot_pod
+    make_image
+    upload_image 
+
+    echo "Do you wish to update relevant pods?"
+    select yn in "Yes" "No"; do
+        case $yn in
+            Yes )
+            update_pods 
+            exit
+            ;;
+            No ) 
+            exit
+            ;;
+        esac
+    done
+}
+
+for arg in "$@"
+do
+case "$arg" in
+        --help|-h)
+            print_help
+            exit
         ;;
-        No ) 
-        exit
+        *)
+            deployment_name="${1#*=}"
         ;;
     esac
+    shift
 done
 
+if [ -z "$deployment_name" ]; then 
+    echo "Deployment name is required"
 
+    exit 1;
+fi
+
+if [ -z "$KONTAIN_SNAPSHOT_REGISTRY" ]; then 
+    echo "Environment variable KONTAIN_SNAPSHOT_REGISTRY must be set in the format"
+    echo " registry/account "
+    echo " For example, export KONTAIN_SNAPSHOT_REGISTRY=docker.io/kontainapp "
+    echo " and you must be logged in to it to push snapshot image"
+    exit 1;
+fi
+
+trap cleanup EXIT
+
+main
