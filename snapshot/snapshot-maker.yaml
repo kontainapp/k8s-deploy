@@ -28,7 +28,6 @@ spec:
           value: /tmp
         - name: SNAPDIR_HOST
           value: /tmp/
-        - name: SNA
       securityContext:
         privileged: true
       volumeMounts:
