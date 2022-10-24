@@ -36,7 +36,7 @@ MAKER_POD_YAML=$DIR/kontain-maker.yaml
 MAKER_POD_ENTRYPOINT_YAML=$DIR/snapshot_entrypoint.yaml
 
 SNAP_DOCKER_FILE=$DIR/kmsnap.dockerfile
-# Snapshot directory names.  In the container and outside the container
+# Snapshot directory names. In the container and outside the container
 # What happens when we don't run this on the kubernetes node running the deployment?
 SNAPDIR_HOST=/tmp/kontain-snapdir-$$
 SNAPDIR_CONTAINER=/tmp/kontain-snapdir
@@ -55,7 +55,7 @@ function cleanup() {
 }
 
 function print_help() {
-    echo "usage: $0  deployment-name"
+    echo "usage: $0 deployment-name"
     echo ""
     echo "Create snapshot of a deployment pod and apply if needed. "
     echo "Environment variable KONTAIN_SNAPSHOT_REGISTRY must be set prior to calling script in the format"
@@ -73,7 +73,7 @@ function load_tools() {
     # Get yq
     YQ=$DIR/yq
     if [ ! -f $YQ ] && [ ! -x $YQ ]; then 
-        curl -o $YQ -L  https://github.com/mikefarah/yq/releases/download/v4.28.1/yq_linux_amd64
+        curl -o $YQ -L https://github.com/mikefarah/yq/releases/download/v4.28.1/yq_linux_amd64
         chmod +x YQ
     fi
 }
@@ -102,11 +102,11 @@ function add_envs()
     # check for every key and add or update it 
     for i in "${!kontain_envs[@]}"
     do
-        has_key=$(key=$i $YQ '.spec.containers[].env[]|select(.name == strenv(key)).name'  $filename)
+        has_key=$(key=$i $YQ '.spec.containers[].env[]|select(.name == strenv(key)).name' $filename)
         if [ "$has_key" = "$i" ]; then 
-            key=$i value="${kontain_envs[$i]}" $YQ -i '(.spec.containers[].env[]|select(.name == strenv(key)).value)|=strenv(value)'  $filename
+            key=$i value="${kontain_envs[$i]}" $YQ -i '(.spec.containers[].env[]|select(.name == strenv(key)).value)|=strenv(value)' $filename
         else
-            key=$i value="${kontain_envs[$i]}" $YQ -i '.spec.containers[].env = [{"name": strenv(key), "value": strenv(value)}] + .spec.containers[].env'  $filename
+            key=$i value="${kontain_envs[$i]}" $YQ -i '.spec.containers[].env = [{"name": strenv(key), "value": strenv(value)}] + .spec.containers[].env' $filename
         fi
     done
 }
@@ -129,7 +129,7 @@ function get_pod() {
 
     selector=$(kubectl get deployment $deployment_name -o wide | tail -n 1 | awk '{print $8}')
 
-    pod=$(kubectl get pods -l $selector |tail -1 | awk '{print $1}')
+    pod=$(kubectl get pods -l $selector | tail -1 | awk '{print $1}')
 
     kubectl get pod $pod -o yaml > $POD_YAMLFILE
 
@@ -148,14 +148,14 @@ function prepare_pod() {
 
     # remove extra fields 
     $YQ -i 'del(.status)' $TARGET_POD_YAML
-    $YQ  -i 'del(.metadata.uid)' $TARGET_POD_YAML
-    $YQ  -i 'del(.metadata.generateName)' $TARGET_POD_YAML
-    $YQ  -i 'del(.metadata.ownerReferences)' $TARGET_POD_YAML
-    $YQ  -i 'del(.metadata.creationTimestamp)' $TARGET_POD_YAML
-    $YQ  -i 'del(.metadata.labels.pod-template-hash)' $TARGET_POD_YAML
+    $YQ -i 'del(.metadata.uid)' $TARGET_POD_YAML
+    $YQ -i 'del(.metadata.generateName)' $TARGET_POD_YAML
+    $YQ -i 'del(.metadata.ownerReferences)' $TARGET_POD_YAML
+    $YQ -i 'del(.metadata.creationTimestamp)' $TARGET_POD_YAML
+    $YQ -i 'del(.metadata.labels.pod-template-hash)' $TARGET_POD_YAML
 
     # give pod a name
-    pod=$TARGET_POD_NAME $YQ  -i '(.metadata.name=strenv(pod))' $TARGET_POD_YAML
+    pod=$TARGET_POD_NAME $YQ -i '(.metadata.name=strenv(pod))' $TARGET_POD_YAML
 
 
     # change namespace to avoid being used by original deployment
@@ -173,7 +173,7 @@ function prepare_pod() {
         host_path=$SNAPDIR_HOST $YQ -i '(.spec.volumes[]|select(.name == "kontain-snap-volume").hostPath.path=strenv(host_path))' $TARGET_POD_YAML
     else
         # kontain volume definition is not there
-        host_path=$SNAPDIR_HOST $YQ -i '.spec.volumes = [{"name": "kontain-snap-volume", "hostPath": {"path": strenv(host_path), "type": "DirectoryOrCreate"}}] + .spec.volumes'  $TARGET_POD_YAML
+        host_path=$SNAPDIR_HOST $YQ -i '.spec.volumes = [{"name": "kontain-snap-volume", "hostPath": {"path": strenv(host_path), "type": "DirectoryOrCreate"}}] + .spec.volumes' $TARGET_POD_YAML
     fi
 
     # Add snapshot volumeMounts to the container
@@ -183,7 +183,7 @@ function prepare_pod() {
         container_path=$SNAPDIR_CONTAINER $YQ -i '(.spec.containers[].volumeMounts|select(.name == "kontain-snap-volume").mountPath = strenv(container_path))' $TARGET_POD_YAML
     else 
         # kontain volume mount definition is not there
-        container_path=$SNAPDIR_CONTAINER $YQ -i '.spec.containers[].volumeMounts = [{"name": "kontain-snap-volume", "mountPath": strenv(container_path)}] + .spec.containers[].volumeMounts'  $TARGET_POD_YAML
+        container_path=$SNAPDIR_CONTAINER $YQ -i '.spec.containers[].volumeMounts = [{"name": "kontain-snap-volume", "mountPath": strenv(container_path)}] + .spec.containers[].volumeMounts' $TARGET_POD_YAML
     fi
 
     # Add "runtimeClassName: kontain" to the pod or deployment.
@@ -200,21 +200,21 @@ function prepare_snapshot_pod() {
     cp $SNAPSHOT_YAMLFILE $MAKER_POD_YAML
 
     #make sure pod name is what this cript expects 
-    pod=$MAKER_POD_NAME $YQ  -i '(.metadata.name=strenv(pod))' $MAKER_POD_YAML
+    pod=$MAKER_POD_NAME $YQ -i '(.metadata.name=strenv(pod))' $MAKER_POD_YAML
 
-    # pass port and ip to the control pod     
+    # pass port and ip to the control pod 
     kubectl wait --for=condition=Ready pod -n $KONTAIN_NAMESPACE $TARGET_POD_NAME >& /dev/null
-    status=$(kubectl get pod  -n $KONTAIN_NAMESPACE $TARGET_POD_NAME -o jsonpath="{.status.phase}")
+    status=$(kubectl get pod -n $KONTAIN_NAMESPACE $TARGET_POD_NAME -o jsonpath="{.status.phase}")
     if [ "$status" != "Running" ]; then 
         echo "Error starting target pod"
         exit 1
     fi
 
-    ip=$(kubectl get pod -n $KONTAIN_NAMESPACE  $TARGET_POD_NAME -o jsonpath='{.status.podIP}')
-    port=$(kubectl get pod -n $KONTAIN_NAMESPACE $TARGET_POD_NAME  -o jsonpath='{.spec.containers[0].ports[0].containerPort}')
+    ip=$(kubectl get pod -n $KONTAIN_NAMESPACE $TARGET_POD_NAME -o jsonpath='{.status.podIP}')
+    port=$(kubectl get pod -n $KONTAIN_NAMESPACE $TARGET_POD_NAME -o jsonpath='{.spec.containers[0].ports[0].containerPort}')
     port=${port:=80}
 
-    declare -A  extra_kontain_envs
+    declare -A extra_kontain_envs
     extra_kontain_envs[IP]=$ip
     extra_kontain_envs[PORT]=$port
 
@@ -226,9 +226,9 @@ function prepare_snapshot_pod() {
     kubectl apply -f $MAKER_POD_ENTRYPOINT_YAML >& /dev/null
     kubectl apply -f $MAKER_POD_YAML >& /dev/null
 
-    # wait for manager pod  to be ready, i.e untill snapshot is made 
-    kubectl wait --for=condition=Ready pod -n $KONTAIN_NAMESPACE $MAKER_POD_NAME  >& /dev/null
-    status=$(kubectl get pod  -n $KONTAIN_NAMESPACE $MAKER_POD_NAME -o jsonpath="{.status.phase}")
+    # wait for manager pod to be ready, i.e untill snapshot is made 
+    kubectl wait --for=condition=Ready pod -n $KONTAIN_NAMESPACE $MAKER_POD_NAME >& /dev/null
+    status=$(kubectl get pod -n $KONTAIN_NAMESPACE $MAKER_POD_NAME -o jsonpath="{.status.phase}")
     if [ "$status" != "Running" ]; then 
         echo "Error starting maker pod"
         exit 1
@@ -263,7 +263,7 @@ EOF
     chown $(id -u):$(id -g) $IMAGE_DIR/$SNAPFILE
     chmod 755 $IMAGE_DIR/$SNAPFILE
 
-    result=$(docker build -t $SNAP_IMAGE_NAME -f $SNAP_DOCKER_FILE $IMAGE_DIR  2>&1 > /dev/null)
+    result=$(docker build -t $SNAP_IMAGE_NAME -f $SNAP_DOCKER_FILE $IMAGE_DIR 2>&1 > /dev/null)
     if [ $? != 0 ]; then
         echo "Failed to build snapshot image"
         echo "docker: $result"
@@ -281,7 +281,7 @@ function upload_image() {
         echo "Make sure container registry $KONTAIN_SNAPSHOT_REGISTRY exists and you are logged into it with necessary permissions"
         echo "docker: $result"
         exit 1
-    fi    
+    fi
     echo "Image $SNAP_IMAGE_NAME has been uploaded"
 
 }
@@ -289,7 +289,7 @@ function update_pods() {
 
     echo -n "Updating deployment with new image....."
 
-    kubectl set image deployment.apps/$deployment_name  $CONTAINER_NAME=$SNAP_IMAGE_NAME >& /dev/null
+    kubectl set image deployment.apps/$deployment_name $CONTAINER_NAME=$SNAP_IMAGE_NAME >& /dev/null
     
     echo "done"
 }
