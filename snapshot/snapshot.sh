@@ -16,9 +16,10 @@
 
 [ "$TRACE" ] && set -x
 
-KONTAIN_NAMESPACE="kontain-snapshot-ns"
-TARGET_POD_NAME="kontain-snaphot-target"
-MAKER_POD_NAME="kontain-snapshot-maker"
+UNQ_POSTFIX=$(mktemp -u XXXXXX | tr '[:upper:]' '[:lower:]')-$$
+KONTAIN_NAMESPACE="kontain-snapshot-ns-$UNQ_POSTFIX"
+TARGET_POD_NAME="kontain-snaphot-target-$UNQ_POSTFIX"
+MAKER_POD_NAME="kontain-snapshot-maker-$UNQ_POSTFIX"
 
 SOURCE=${BASH_SOURCE[0]}
 while [ -L "$SOURCE" ]; do # resolve $SOURCE until the file is no longer a symlink
@@ -29,18 +30,20 @@ done
 DIR=$( cd -P "$( dirname "$SOURCE" )" >/dev/null 2>&1 && pwd )
 
 SNAPSHOT_YAMLFILE=$DIR/snapshot-maker.yaml
-# Files we derive for modifications
-POD_YAMLFILE=$DIR/pod-original.yaml
-TARGET_POD_YAML=$DIR/kontain-target.yaml
-MAKER_POD_YAML=$DIR/kontain-maker.yaml
 MAKER_POD_ENTRYPOINT_YAML=$DIR/snapshot_entrypoint.yaml
 
-SNAP_DOCKER_FILE=$DIR/kmsnap.dockerfile
+# Files we derive for modifications
+POD_YAMLFILE=$DIR/pod-original-$UNQ_POSTFIX.yaml
+TARGET_POD_YAML=$DIR/kontain-target-$UNQ_POSTFIX.yaml
+MAKER_POD_YAML=$DIR/kontain-maker-$UNQ_POSTFIX.yaml
+MAKER_CONFIGMAP_YAML=$DIR/kontain-maker-script-$UNQ_POSTFIX.yaml
+
+SNAP_DOCKER_FILE=$DIR/kmsnap-$UNQ_POSTFIX.dockerfile
 # Snapshot directory names. In the container and outside the container
 # What happens when we don't run this on the kubernetes node running the deployment?
-SNAPDIR_HOST=/tmp/kontain-snapdir-$$
+SNAPDIR_HOST=/tmp/kontain-snapdir-$UNQ_POSTFIX
 SNAPDIR_CONTAINER=/tmp/kontain-snapdir
-IMAGE_DIR=$DIR/image
+IMAGE_DIR=$DIR/image-$UNQ_POSTFIX
 
 function cleanup() {
     echo "Cleaning up"
@@ -49,6 +52,7 @@ function cleanup() {
     rm $POD_YAMLFILE >& /dev/null
     rm $TARGET_POD_YAML >& /dev/null
     rm $MAKER_POD_YAML >& /dev/null
+    rm $MAKER_CONFIGMAP_YAML >& /dev/null
     rm -rf $IMAGE_DIR >& /dev/null
     rm $SNAP_DOCKER_FILE >& /dev/null
 
@@ -102,11 +106,11 @@ function add_envs()
     # check for every key and add or update it 
     for i in "${!kontain_envs[@]}"
     do
-        has_key=$(key=$i $YQ '.spec.containers[].env[]|select(.name == strenv(key)).name' $filename)
+        has_key=$(key=$i $YQ '.spec.containers[0].env[]|select(.name == strenv(key)).name' $filename)
         if [ "$has_key" = "$i" ]; then 
-            key=$i value="${kontain_envs[$i]}" $YQ -i '(.spec.containers[].env[]|select(.name == strenv(key)).value)|=strenv(value)' $filename
+            key=$i value="${kontain_envs[$i]}" $YQ -i '(.spec.containers[0].env[]|select(.name == strenv(key)).value)|=strenv(value)' $filename
         else
-            key=$i value="${kontain_envs[$i]}" $YQ -i '.spec.containers[].env = [{"name": strenv(key), "value": strenv(value)}] + .spec.containers[].env' $filename
+            key=$i value="${kontain_envs[$i]}" $YQ -i '.spec.containers[0].env = [{"name": strenv(key), "value": strenv(value)}] + .spec.containers[0].env' $filename
         fi
     done
 }
@@ -128,15 +132,35 @@ function get_pod() {
     # find a pod that belongs to the deployment and get its yaml
 
     selector=$(kubectl get deployment $deployment_name -o wide | tail -n 1 | awk '{print $8}')
+    if [ -z $selector ]; then 
+        # kubectl will report error, so we just exit
+        exit 1
+    fi
 
     pod=$(kubectl get pods -l $selector | tail -1 | awk '{print $1}')
+    if [ -z $pod ]; then 
+        # kubectl will report error, so we just exit
+        exit 1
+    fi
 
     kubectl get pod $pod -o yaml > $POD_YAMLFILE
+    result=$?
+    if [ $result -ne 0 ]; then 
+        # kubectl will report error, so we just exit
+        exit 1
+    fi
+
+    # we do NOT support multiple containers per pod - check for that
+    container_count=$($YQ '.spec.containers|length' $POD_YAMLFILE)
+    if [ $container_count -gt 1 ]; then 
+        echo "Kontain does not currently support multiple containers per pod"
+        exit 1
+    fi
 
     # read image the pod was created from
-    IMAGE_NAME=$($YQ '.spec.containers[].image' $POD_YAMLFILE)
+    IMAGE_NAME=$($YQ '.spec.containers[0].image' $POD_YAMLFILE)
     NODE_NAME=$($YQ '.spec.nodeName' $POD_YAMLFILE)
-    CONTAINER_NAME=$($YQ '.spec.containers[].name' $POD_YAMLFILE)
+    CONTAINER_NAME=$($YQ '.spec.containers[0].name' $POD_YAMLFILE)
 
     echo "done"
 }
@@ -177,18 +201,20 @@ function prepare_pod() {
     fi
 
     # Add snapshot volumeMounts to the container
-    has_key=$($YQ '.spec.containers[].volumeMounts[]|select(.name == "kontain-snap-volume").name' $TARGET_POD_YAML)
+    has_key=$($YQ '.spec.containers[0].volumeMounts[]|select(.name == "kontain-snap-volume").name' $TARGET_POD_YAML)
     if [ "$has_key" = "kontain-snap-volume" ]; then 
         # the kontain volumeMounts entry is there, be sure the mountPath is correct
-        container_path=$SNAPDIR_CONTAINER $YQ -i '(.spec.containers[].volumeMounts|select(.name == "kontain-snap-volume").mountPath = strenv(container_path))' $TARGET_POD_YAML
+        container_path=$SNAPDIR_CONTAINER $YQ -i '(.spec.containers[0].volumeMounts|select(.name == "kontain-snap-volume").mountPath = strenv(container_path))' $TARGET_POD_YAML
     else 
         # kontain volume mount definition is not there
-        container_path=$SNAPDIR_CONTAINER $YQ -i '.spec.containers[].volumeMounts = [{"name": "kontain-snap-volume", "mountPath": strenv(container_path)}] + .spec.containers[].volumeMounts' $TARGET_POD_YAML
+        container_path=$SNAPDIR_CONTAINER $YQ -i '.spec.containers[0].volumeMounts = [{"name": "kontain-snap-volume", "mountPath": strenv(container_path)}] + .spec.containers[0].volumeMounts' $TARGET_POD_YAML
     fi
 
     # Add "runtimeClassName: kontain" to the pod or deployment.
     $YQ '(.spec.runtimeClassName = "kontain")' -i $TARGET_POD_YAML
  
+    # kubectl apply always succeeds, so pointless to test, that is why we use wait and analize kubectl output
+    # we wait for pod to be ready before assuming it works in the prepare_snapshot_pod function
     kubectl apply -f $TARGET_POD_YAML >& /dev/null
 
     echo "done"
@@ -198,9 +224,14 @@ function prepare_snapshot_pod() {
 
     echo -n "Preparing snapshot maker....."
     cp $SNAPSHOT_YAMLFILE $MAKER_POD_YAML
+    cp $MAKER_POD_ENTRYPOINT_YAML $MAKER_CONFIGMAP_YAML
 
-    #make sure pod name is what this cript expects 
+    #make sure pod name is what this script expects 
     pod=$MAKER_POD_NAME $YQ -i '(.metadata.name=strenv(pod))' $MAKER_POD_YAML
+    #assign generated namespace name to both maker pod and maker configmaps
+    ns=$KONTAIN_NAMESPACE $YQ -i '(.metadata.namespace=strenv(ns))' $MAKER_POD_YAML
+    ns=$KONTAIN_NAMESPACE $YQ -i '(.metadata.namespace=strenv(ns))' $MAKER_CONFIGMAP_YAML
+
 
     # pass port and ip to the control pod 
     kubectl wait --for=condition=Ready pod -n $KONTAIN_NAMESPACE $TARGET_POD_NAME >& /dev/null
@@ -214,6 +245,11 @@ function prepare_snapshot_pod() {
     port=$(kubectl get pod -n $KONTAIN_NAMESPACE $TARGET_POD_NAME -o jsonpath='{.spec.containers[0].ports[0].containerPort}')
     port=${port:=80}
 
+    if [ -z $ip ] || [ -z $port ]; then
+        echo "Target pod does not have IP or port - no entrypoint"
+        exit 1
+    fi
+
     declare -A extra_kontain_envs
     extra_kontain_envs[IP]=$ip
     extra_kontain_envs[PORT]=$port
@@ -223,10 +259,10 @@ function prepare_snapshot_pod() {
     # assign pod to specific node
     set_node_selector $MAKER_POD_YAML
 
-    kubectl apply -f $MAKER_POD_ENTRYPOINT_YAML >& /dev/null
+    kubectl apply -f $MAKER_CONFIGMAP_YAML >& /dev/null
     kubectl apply -f $MAKER_POD_YAML >& /dev/null
 
-    # wait for manager pod to be ready, i.e untill snapshot is made 
+    # wait for manager pod to be ready, i.e until snapshot is made 
     kubectl wait --for=condition=Ready pod -n $KONTAIN_NAMESPACE $MAKER_POD_NAME >& /dev/null
     status=$(kubectl get pod -n $KONTAIN_NAMESPACE $MAKER_POD_NAME -o jsonpath="{.status.phase}")
     if [ "$status" != "Running" ]; then 
@@ -243,6 +279,11 @@ function make_image() {
 
     mkdir -p $IMAGE_DIR
     kubectl cp $KONTAIN_NAMESPACE/$MAKER_POD_NAME:$SNAPDIR_CONTAINER $IMAGE_DIR >& /dev/null
+
+    if ! compgen -G "$IMAGE_DIR/kmsnap*" > /dev/null; then
+        echo "Snapshot file could not be made or retrieved"
+        exit 1
+    fi
 
     # Create a new container image to run the snapshot
     # This needs to handle differing snapshot filenanes kmsnap vs kmsnap.XXX.NNN
@@ -273,7 +314,7 @@ EOF
 }
 
 function upload_image() {
-    echo -n "Uploading image to dockerhub....."
+    echo -n "Uploading image to Container Registry $KONTAIN_SNAPSHOT_REGISTRY ....."
 
     result=$(docker push $SNAP_IMAGE_NAME 2>&1 > /dev/null)
     if [ $? != 0 ]; then
@@ -287,11 +328,24 @@ function upload_image() {
 }
 function update_pods() {
 
-    echo -n "Updating deployment with new image....."
+    echo -n "Updating deployment with new image ....."
 
-    kubectl set image deployment.apps/$deployment_name $CONTAINER_NAME=$SNAP_IMAGE_NAME >& /dev/null
-    
+    # kubectl set image is just assignment and since we already cheked deployment exists it will perform teh assignment
+    # if image is broken, the only way to see it is to review status of deployment pods 
+    kubectl set image deployments/$deployment_name $CONTAINER_NAME=$SNAP_IMAGE_NAME >& /dev/null
+
     echo "done"
+
+    echo -n "Waiting for rollout to finish"
+    while kubectl rollout status deployments/$deployment_name | grep -q Waiting
+    do 
+        echo -n .
+        sleep 3s
+    done
+    echo ""
+    # print final status of deployment 
+    kubectl rollout status deployments/$deployment_name
+
 }
 
 function main() {
