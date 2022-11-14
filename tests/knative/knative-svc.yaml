@@ -1,0 +1,27 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: spring-boot-svc
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/initial-scale: "1"
+        autoscaling.knative.dev/min-scale: "1"
+    spec:
+      runtimeClassName: kontain
+      containers:
+        - image: kontaintests.azurecr.io/sb-test-snap-fc:latest
+          env:
+            - name: SNAP_LISTEN_PORT
+              value: "i4 8080"
+          ports:
+            - containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /greeting
+          livenessProbe:
+            httpGet:
+              path: /greeting
+      imagePullSecrets:
+        - name: cntr-registry-secret

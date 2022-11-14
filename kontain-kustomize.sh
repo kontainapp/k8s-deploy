@@ -227,6 +227,25 @@ os=$(kubectl get nodes -ojson | jq -r '.items[0] | .status | .nodeInfo | .osImag
 runtime=$(kubectl get node -ojson | jq -r '.items[0] | .status | .nodeInfo | .containerRuntimeVersion')
 post_process=""
 
+if [ "$cloud_provider" = "knative" ]; then
+    labels=$(kubectl get nodes -ojson | jq '.items[0] | .metadata | .labels')
+    # we have to figure out which cluster is was applied to all over again via labels
+    if [[ "$labels" =~ .*"azure".* ]]; then
+        cloud_provider="azure"
+    elif [[ "$labels" =~ .*"minikube".* ]]; then
+        cloud_provider="minikube"
+    elif [[ "$labels" =~ .*"aws".* ]]; then
+        cloud_provider="aws"
+    elif [[ "$labels" =~ .*"gce".* ]]; then
+        cloud_provider="gce"
+    elif [[ "$labels" =~ .*"k3s".* ]]; then
+        cloud_provider="k3s"
+    else 
+        echo "Unrecognized cluster provider $cloud_provider."
+        exit 1
+    fi
+fi    
+
 if [ "$cloud_provider" = "azure" ]; then
     overlay=containerd
 elif [ "$cloud_provider" = "aws" ]; then
