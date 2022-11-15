@@ -45,12 +45,12 @@ data:
       mv ${OPT_KONTAIN}/container-runtime/krun-label-trigger ${OPT_KONTAIN}/bin/krun-label-trigger
       rm -rf ${OPT_KONTAIN}/container-runtime
     fi
-    if [ ! -f ${OPT_KONTAIN}/shim/containerd-shim-krun-v2 ]; then 
+    if [ ! -f ${OPT_KONTAIN}/shim/containerd-shim-krun-v2 ]; then
       mkdir -p ${OPT_KONTAIN}/shim
-      mv ${OPT_KONTAIN}/cloud/k8s/deploy/shim/containerd-shim-krun-v2 ${OPT_KONTAIN}/shim/containerd-shim-krun-v2
+      mv ${OPT_KONTAIN}/cloud/k8s/shim/containerd-shim-krun-v2 ${OPT_KONTAIN}/shim/containerd-shim-krun-v2
       rm -rf ${OPT_KONTAIN}/cloud
     fi
-    if [ ! -f ${OPT_KONTAIN}/bin/kkm.run ]; then 
+    if [ ! -f ${OPT_KONTAIN}/bin/kkm.run ]; then
       mv ${OPT_KONTAIN}/kkm.run ${OPT_KONTAIN}/bin/kkm.run
     fi
 
