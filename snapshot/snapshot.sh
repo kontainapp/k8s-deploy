@@ -51,6 +51,7 @@ object_type=deployment
 object_namespace=""
 container_name=""
 url_path=""
+suffix=""
 
 function cleanup() {
     echo "Cleaning up"
@@ -66,7 +67,7 @@ function cleanup() {
 }
 
 function print_help() {
-    echo "usage: $0 --type=[deployment|pod] deployment-or-pod-name [--namespace=<namespace> of a pod]"
+    echo "usage: $0 --type=[deployment|pod] deployment-or-pod-name [--namespace=<namespace> of a pod] [--container=name] [--url-path=path] [--image-suffix=suffix]"
     echo ""
     echo "Create snapshot of a deployment or pod and apply if needed. "
     echo "Environment variable KONTAIN_SNAPSHOT_REGISTRY must be set prior to calling script in the format"
@@ -83,6 +84,7 @@ function print_help() {
     echo " --namespace Optional namespace (if other then default) for pod. " 
     echo " --container Name of the pod container to snapshot"
     echo " --url-path / by default "
+    echo " --image-suffix suffix appended to the name of the pod/deployment image to differenciate images.  "
     exit 1
 }
 
@@ -329,7 +331,7 @@ CMD ["/kmsnap"]
 EOF
 
     
-    SNAP_IMAGE_NAME=$KONTAIN_SNAPSHOT_REGISTRY/$(basename "${IMAGE_NAME%%:*}")-kmsnap
+    SNAP_IMAGE_NAME=$KONTAIN_SNAPSHOT_REGISTRY/$(basename "${IMAGE_NAME%%:*}")-kmsnap${suffix}
 
     chown $(id -u):$(id -g) $IMAGE_DIR/$SNAPFILE
     chmod 755 $IMAGE_DIR/$SNAPFILE
@@ -427,6 +429,9 @@ case "$arg" in
         ;;
         --url-path=*)
             url_path="${1#*=}"
+        ;;
+        --image-suffix=*)
+            suffix="${1#*=}"
         ;;
         *)
             object_name="${1#*=}"

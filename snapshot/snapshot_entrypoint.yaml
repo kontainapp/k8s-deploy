@@ -33,10 +33,13 @@ data:
     done
 
     # wait for target pod to start fully and reply to end point 
-    until $(curl --output /dev/null --silent --fail $URL); do
+    until curl --output /dev/null --silent --fail $URL; do
         printf '.'
         sleep 5
     done
+
+    # to let snapshot cto calm down after the curl 
+    sleep 5
 
     chroot /root /bin/bash -c /scripts-lib/runner.sh
 
