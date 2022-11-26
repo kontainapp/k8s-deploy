@@ -16,6 +16,8 @@
 
 [ "$TRACE" ] && set -x
 
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+
 print_help() {
     echo "usage: $0 [options]"
     echo "Creates k3s cluster"
@@ -29,9 +31,9 @@ print_help() {
 main() {
     
     curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="--disable-selinux --no-deploy traefik --disable traefik --disable servicelb \
-        --flannel-backend=vxlan \
+        --flannel-backend=host-gw \
         --cluster-cidr=10.0.0.0/16 --service-cidr=10.40.0.0/17 --kube-controller-manager-arg=node-cidr-mask-size=20 \
-        --kubelet-arg=config=/home/leka/workspace/km/cloud/k8s/deploy/helpers/k3s.config" INSTALL_K3S_VERSION="v1.24.3+k3s1" \
+        --kubelet-arg=config=${SCRIPT_DIR}/k3s.config" INSTALL_K3S_VERSION="v1.24.3+k3s1" \
         sh -s - --write-kubeconfig-mode 666
 
     echo "waiting for k3s to become active"
