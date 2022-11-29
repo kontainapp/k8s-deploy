@@ -9,4 +9,7 @@ runs:
 
         ./kontain-kustomize.sh --deploy-location=./kontain-deploy
 
+        pname=$(kubectl get pod -l app=kontain-init -o jsonpath="{.items[0].metadata.name}" -n kube-system)
+        kubectl logs -n kube-system ${pname}
+
       shell: bash {0}
