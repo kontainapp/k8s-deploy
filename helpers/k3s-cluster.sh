@@ -16,6 +16,8 @@
 
 [ "$TRACE" ] && set -x
 
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+
 print_help() {
     echo "usage: $0 [options]"
     echo "Creates k3s cluster"
@@ -28,7 +30,11 @@ print_help() {
 }
 main() {
     
-    curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="--no-deploy traefik --disable servicelb --flannel-backend=host-gw" INSTALL_K3S_VERSION="v1.24.3+k3s1" sh -s - --write-kubeconfig-mode 666
+    curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="--disable-selinux --no-deploy traefik --disable traefik --disable servicelb \
+        --flannel-backend=host-gw \
+        --cluster-cidr=10.0.0.0/16 --service-cidr=10.40.0.0/17 --kube-controller-manager-arg=node-cidr-mask-size=20 \
+        --kubelet-arg=config=${SCRIPT_DIR}/k3s.config" INSTALL_K3S_VERSION="v1.24.3+k3s1" \
+        sh -s - --write-kubeconfig-mode 666
 
     echo "waiting for k3s to become active"
     until systemctl is-active k3s; do echo -n "."; done
@@ -39,7 +45,7 @@ main() {
     echo "waiting for cluster to become available"
     until kubectl wait --for=condition=Ready pods --all -n kube-system &> /dev/null; do echo -n "."; done
     echo ""
-
+    
     echo "make sure to run "
     echo "  export KUBECONFIG=/etc/rancher/k3s/k3s.yaml"
     echo "to enable allow kubectl to work with your cluster"

@@ -34,8 +34,8 @@ on:
     inputs:
       tmate_enabled:
         type: boolean
-        description: "Start tmate debugging enabled"
-        required: false
+        description: "Enable tmate debugging"
+        required: true
         default: false
       # for future
       # log_enabled:
@@ -67,6 +67,10 @@ jobs:
 
       - uses: ./.github/actions/test-app
 
+      - name: Setup tmate session
+        if: ${{ inputs.tmate_enabled }}
+        uses: mxschmitt/action-tmate@v3
+
       - name: Clean cluster
         if: ${{ always() }}
         run: |
@@ -92,7 +96,7 @@ jobs:
       - uses: ./.github/actions/test-app
 
       - name: Setup tmate session
-        if: ${{ failure() || ( github.event_name == 'workflow_dispatch' && inputs.tmate_enabled ) }}
+        if: ${{ inputs.tmate_enabled }}
         uses: mxschmitt/action-tmate@v3
 
       - name: Cleanup cluster
@@ -192,7 +196,7 @@ jobs:
       - uses: ./.github/actions/test-app
 
       - name: Setup tmate session
-        if: ${{ failure() || ( github.event_name == 'workflow_dispatch' && inputs.tmate_enabled ) }}
+        if: ${{ inputs.tmate_enabled }}
         uses: mxschmitt/action-tmate@v3
 
       - name: Cleanup cluster
@@ -232,7 +236,7 @@ jobs:
       - uses: ./.github/actions/test-app
 
       - name: Setup tmate session
-        if: ${{ failure() || ( github.event_name == 'workflow_dispatch' && inputs.tmate_enabled ) }}
+        if: ${{ inputs.tmate_enabled }}
         uses: mxschmitt/action-tmate@v3
 
       - name: Cleanup cluster

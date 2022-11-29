@@ -25,15 +25,10 @@ data:
 
     [ "$TRACE" ] && set -x
 
-    # reading latest release artifact tag info from current_release.txt
-    TAG=${TAG:-$(curl -L -s https://raw.githubusercontent.com/kontainapp/km/current/km-releases/current_release.txt)}
-
     KONTAIN_RELEASE_URL=${KONTAIN_RELEASE_URL:-"https://github.com/kontainapp/km/releases/download/${TAG}/kontain_bin.tar.gz"}
 
     mkdir -p ${OPT_KONTAIN}
     curl -L "${KONTAIN_RELEASE_URL}" | tar -xzf - -C ${OPT_KONTAIN}
-
-    ls -R ${OPT_KONTAIN}
 
     # fall back to old way of building kontain_bin.tar.gz
     if [ ! -f ${OPT_KONTAIN}/bin/km ]; then

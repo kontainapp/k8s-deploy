@@ -150,8 +150,14 @@ function prepare_km() {
         echo "KONTAIN_RELEASE_URL=$km_url" >> custom.properties
         echo "TRACE=yes" >> custom.properties
         custom_config=true
+    else
+        # no tag and no url - installing current release
+        km_tag=$(curl -L -s https://raw.githubusercontent.com/kontainapp/km/current/km-releases/current_release.txt)
+        echo "TAG=$km_tag" > custom.properties
+        echo "KONTAIN_RELEASE_URL=" >> custom.properties
+        echo "TRACE=yes" >> custom.properties
+        custom_config=true
     fi
-
 }
 
 for arg in "$@"
@@ -226,6 +232,25 @@ fi
 os=$(kubectl get nodes -ojson | jq -r '.items[0] | .status | .nodeInfo | .osImage')
 runtime=$(kubectl get node -ojson | jq -r '.items[0] | .status | .nodeInfo | .containerRuntimeVersion')
 post_process=""
+
+if [ "$cloud_provider" = "knative" ]; then
+    labels=$(kubectl get nodes -ojson | jq '.items[0] | .metadata | .labels')
+    # we have to figure out which cluster is was applied to all over again via labels
+    if [[ "$labels" =~ .*"azure".* ]]; then
+        cloud_provider="azure"
+    elif [[ "$labels" =~ .*"minikube".* ]]; then
+        cloud_provider="minikube"
+    elif [[ "$labels" =~ .*"aws".* ]]; then
+        cloud_provider="aws"
+    elif [[ "$labels" =~ .*"gce".* ]]; then
+        cloud_provider="gce"
+    elif [[ "$labels" =~ .*"k3s".* ]]; then
+        cloud_provider="k3s"
+    else 
+        echo "Unrecognized cluster provider $cloud_provider."
+        exit 1
+    fi
+fi    
 
 if [ "$cloud_provider" = "azure" ]; then
     overlay=containerd

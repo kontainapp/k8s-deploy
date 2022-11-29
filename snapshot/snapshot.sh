@@ -42,8 +42,16 @@ SNAP_DOCKER_FILE=$DIR/kmsnap-$UNQ_POSTFIX.dockerfile
 # Snapshot directory names. In the container and outside the container
 # What happens when we don't run this on the kubernetes node running the deployment?
 SNAPDIR_HOST=/tmp/kontain-snapdir-$UNQ_POSTFIX
-SNAPDIR_CONTAINER=/tmp/kontain-snapdir
+SNAPDIR_CONTAINER=/tmp/kontain-snapdir-$UNQ_POSTFIX
 IMAGE_DIR=$DIR/image-$UNQ_POSTFIX
+
+SUPPORTED_OBJECT_TYPES="deployment pod"
+
+object_type=deployment
+object_namespace=""
+container_name=""
+url_path=""
+suffix=""
 
 function cleanup() {
     echo "Cleaning up"
@@ -59,17 +67,24 @@ function cleanup() {
 }
 
 function print_help() {
-    echo "usage: $0 deployment-name"
+    echo "usage: $0 --type=[deployment|pod] deployment-or-pod-name [--namespace=<namespace> of a pod] [--container=name] [--url-path=path] [--image-suffix=suffix]"
     echo ""
-    echo "Create snapshot of a deployment pod and apply if needed. "
+    echo "Create snapshot of a deployment or pod and apply if needed. "
     echo "Environment variable KONTAIN_SNAPSHOT_REGISTRY must be set prior to calling script in the format"
     echo " registry/account "
     echo " For example, export KONTAIN_SNAPSHOT_REGISTRY=docker.io/kontainapp."
     echo "If repository is private, make sure to login prior to calling the script"
     echo ""
     echo "Options:"
-    echo "  deployment-name Name of the deployment as printed by command \
-                kubectl get deployments"
+    echo "  deployment-or-pod-name Name of the deployment or pod as printed by command \
+                kubectl get deployments \
+            or \
+                kubect get pods"
+    echo " --type type of object. Possible values are deployment(default) or pod"
+    echo " --namespace Optional namespace (if other then default) for pod. " 
+    echo " --container Name of the pod container to snapshot"
+    echo " --url-path / by default "
+    echo " --image-suffix suffix appended to the name of the pod/deployment image to differenciate images.  "
     exit 1
 }
 
@@ -89,7 +104,6 @@ function add_envs()
     # Add KM_MGTPIPE env var to allow old km's to work.
     declare -A kontain_envs
     kontain_envs[KM_MGTDIR]=$SNAPDIR_CONTAINER
-    kontain_envs[KM_MGTPIPE]=$SNAPDIR_CONTAINER/kmpipe.$$
     kontain_envs[SNAPDIR_HOST]=$SNAPDIR_HOST
     kontain_envs[SNAPDIR_CONTAINER]=$SNAPDIR_CONTAINER
     
@@ -127,40 +141,54 @@ function set_node_selector() {
 }
 
 function get_pod() {
-    echo -n "Reading deployment information....."
 
-    # find a pod that belongs to the deployment and get its yaml
+    echo -n "Reading $object_type information....."
 
-    selector=$(kubectl get deployment $deployment_name -o wide | tail -n 1 | awk '{print $8}')
-    if [ -z $selector ]; then 
-        # kubectl will report error, so we just exit
-        exit 1
+    if [ "$object_type" = "deployment" ]; then
+        # find a pod that belongs to the deployment and get its yaml
+
+        local selector=$(kubectl get deployment $object_name -o wide | tail -n 1 | awk '{print $8}')
+        if [ -z $selector ]; then 
+            # kubectl will report error, so we just exit
+            exit 1
+        fi
+
+        local pod=$(kubectl get pods -l $selector | tail -1 | awk '{print $1}')
+        object_namespace="-n $(kubectl get pod $pod -o yaml | $YQ '.metadata.namespace')"
+
+        if [ -z $pod ]; then 
+            # kubectl will report error, so we just exit
+            exit 1
+        fi
+    else 
+        local pod=$object_name
     fi
 
-    pod=$(kubectl get pods -l $selector | tail -1 | awk '{print $1}')
-    if [ -z $pod ]; then 
-        # kubectl will report error, so we just exit
-        exit 1
-    fi
-
-    kubectl get pod $pod -o yaml > $POD_YAMLFILE
-    result=$?
+    kubectl get pod $object_namespace $pod -o yaml > $POD_YAMLFILE
+    local result=$?
     if [ $result -ne 0 ]; then 
         # kubectl will report error, so we just exit
         exit 1
     fi
 
     # we do NOT support multiple containers per pod - check for that
-    container_count=$($YQ '.spec.containers|length' $POD_YAMLFILE)
-    if [ $container_count -gt 1 ]; then 
-        echo "Kontain does not currently support multiple containers per pod"
-        exit 1
+    local container_count=$($YQ '.spec.containers|length' $POD_YAMLFILE)
+    if [ $container_count -gt 1 ]; then
+        if [ -z "$container_name"]; then 
+            echo "Pod has multiple container, please provide container name"
+            exit 1
+        else
+            # select names of containers to remove   
+            declare -a remove_containers=($(cnt=$container_name $YQ '.spec.containers[].name | select (. != strenv(cnt))' $POD_YAMLFILE))
+        fi
+    else
+        container_name=$($YQ '.spec.containers[0].name' $POD_YAMLFILE)
     fi
 
+    # find container id
     # read image the pod was created from
-    IMAGE_NAME=$($YQ '.spec.containers[0].image' $POD_YAMLFILE)
+    IMAGE_NAME=$(cnt=$container_name $YQ '.spec.containers[] | select(.name==strenv(cnt)).image' $POD_YAMLFILE)
     NODE_NAME=$($YQ '.spec.nodeName' $POD_YAMLFILE)
-    CONTAINER_NAME=$($YQ '.spec.containers[0].name' $POD_YAMLFILE)
 
     echo "done"
 }
@@ -170,6 +198,7 @@ function prepare_pod() {
     echo -n "Preparing target pod....."
     cp $POD_YAMLFILE $TARGET_POD_YAML
 
+
     # remove extra fields 
     $YQ -i 'del(.status)' $TARGET_POD_YAML
     $YQ -i 'del(.metadata.uid)' $TARGET_POD_YAML
@@ -177,6 +206,10 @@ function prepare_pod() {
     $YQ -i 'del(.metadata.ownerReferences)' $TARGET_POD_YAML
     $YQ -i 'del(.metadata.creationTimestamp)' $TARGET_POD_YAML
     $YQ -i 'del(.metadata.labels.pod-template-hash)' $TARGET_POD_YAML
+    for i in $remove_containers 
+    do
+        cnt=$i $YQ -i 'del(.spec.containers[] | select (.name == strenv(cnt)))' $POD_YAMLFILE
+    done
 
     # give pod a name
     pod=$TARGET_POD_NAME $YQ -i '(.metadata.name=strenv(pod))' $TARGET_POD_YAML
@@ -251,8 +284,7 @@ function prepare_snapshot_pod() {
     fi
 
     declare -A extra_kontain_envs
-    extra_kontain_envs[IP]=$ip
-    extra_kontain_envs[PORT]=$port
+    extra_kontain_envs[URL]="http://$ip:$port/$url_path"
 
     add_envs $MAKER_POD_YAML extra_kontain_envs
 
@@ -279,7 +311,7 @@ function make_image() {
 
     mkdir -p $IMAGE_DIR
     kubectl cp $KONTAIN_NAMESPACE/$MAKER_POD_NAME:$SNAPDIR_CONTAINER $IMAGE_DIR >& /dev/null
-
+    
     if ! compgen -G "$IMAGE_DIR/kmsnap*" > /dev/null; then
         echo "Snapshot file could not be made or retrieved"
         exit 1
@@ -299,7 +331,7 @@ CMD ["/kmsnap"]
 EOF
 
     
-    SNAP_IMAGE_NAME=$KONTAIN_SNAPSHOT_REGISTRY/$(basename "${IMAGE_NAME%%:*}")_snap
+    SNAP_IMAGE_NAME=$KONTAIN_SNAPSHOT_REGISTRY/$(basename "${IMAGE_NAME%%:*}")-kmsnap${suffix}
 
     chown $(id -u):$(id -g) $IMAGE_DIR/$SNAPFILE
     chmod 755 $IMAGE_DIR/$SNAPFILE
@@ -328,23 +360,28 @@ function upload_image() {
 }
 function update_pods() {
 
-    echo -n "Updating deployment with new image ....."
+    echo -n "Updating $object_type with new image ....."
 
     # kubectl set image is just assignment and since we already cheked deployment exists it will perform teh assignment
     # if image is broken, the only way to see it is to review status of deployment pods 
-    kubectl set image deployments/$deployment_name $CONTAINER_NAME=$SNAP_IMAGE_NAME >& /dev/null
+    kubectl set image $object_type/$object_name $CONTAINER_NAME=$SNAP_IMAGE_NAME >& /dev/null
 
     echo "done"
 
-    echo -n "Waiting for rollout to finish"
-    while kubectl rollout status deployments/$deployment_name | grep -q Waiting
-    do 
-        echo -n .
-        sleep 3s
-    done
-    echo ""
-    # print final status of deployment 
-    kubectl rollout status deployments/$deployment_name
+    if [ "$object_type" = "deployment" ]; then 
+        echo -n "Waiting for rollout to finish"
+        while kubectl rollout status $object_type/$object_name | grep -q Waiting
+        do 
+            echo -n .
+            sleep 3s
+        done
+        echo ""
+        # print final status of deployment 
+        kubectl rollout status $object_type/$object_name
+    else 
+        # wait for pod to become ready 
+        kubectl wait --for=condition=Ready pod -n $KONTAIN_NAMESPACE $object_name >& /dev/null
+    fi
 
 }
 
@@ -381,17 +418,37 @@ case "$arg" in
             print_help
             exit
         ;;
+        --type=*)
+            object_type=${1#*=}
+        ;;
+        --namespace=*)
+            object_namespace="-n ${1#*=}"
+        ;;
+        --container=*)
+            container_name="${1#*=}"
+        ;;
+        --url-path=*)
+            url_path="${1#*=}"
+        ;;
+        --image-suffix=*)
+            suffix="${1#*=}"
+        ;;
         *)
-            deployment_name="${1#*=}"
+            object_name="${1#*=}"
         ;;
     esac
     shift
 done
 
-if [ -z "$deployment_name" ]; then 
-    echo "Deployment name is required"
+if [ -z "$object_name" ]; then 
+    echo "${object_type^} name is required"
 
     exit 1;
+fi
+
+if  [[ ! "$SUPPORTED_OBJECT_TYPES" =~ "$object_type" ]]; then
+    echo "Unsupported object type to snapshot"
+    exit 1
 fi
 
 if [ -z "$KONTAIN_SNAPSHOT_REGISTRY" ]; then 

@@ -1,0 +1,4 @@
+spec:
+  spec:
+    ports:
+      - containerPort: 8080

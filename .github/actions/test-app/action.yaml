@@ -24,7 +24,6 @@ runs:
 
         pname=$(kubectl get pod -l kontain=test-app -o jsonpath="{.items[0].metadata.name}")
         echo "Pod name = $pname"
-        kubectl exec "${pname}" -- uname -r
 
         kubectl exec deployment.apps/kontain-test-app -- uname -r | egrep -q -e '.*\.kontain\.(KKM|KVM)$' && echo success|| exit 1
       shell: bash {0}
