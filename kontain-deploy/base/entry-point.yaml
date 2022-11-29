@@ -50,7 +50,7 @@ data:
 
     if ! grep --quiet '"sandbox": "kontain"' out.json ; then 
 
-      #do full install
+      # do full install
       
       # preserve nodes resolve.conf and use one from pod while in chroot
       cp ${ROOT_MOUNT_DIR}/etc/resolv.conf ${ROOT_MOUNT_DIR}/etc/resolv.conf.orig
