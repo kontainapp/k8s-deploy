@@ -42,7 +42,7 @@ data:
     fi
     if [ ! -f ${OPT_KONTAIN}/shim/containerd-shim-krun-v2 ]; then 
       mkdir -p ${OPT_KONTAIN}/shim
-      mv ${OPT_KONTAIN}/cloud/k8s/shim/containerd-shim-krun-v2 ${OPT_KONTAIN}/shim/containerd-shim-krun-v2
+      mv ${OPT_KONTAIN}/cloud/k8s/deploy/shim/containerd-shim-krun-v2 ${OPT_KONTAIN}/shim/containerd-shim-krun-v2
       rm -rf ${OPT_KONTAIN}/cloud
     fi
     if [ ! -f ${OPT_KONTAIN}/bin/kkm.run ]; then 
