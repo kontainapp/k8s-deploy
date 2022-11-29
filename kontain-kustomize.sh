@@ -150,8 +150,14 @@ function prepare_km() {
         echo "KONTAIN_RELEASE_URL=$km_url" >> custom.properties
         echo "TRACE=yes" >> custom.properties
         custom_config=true
+    else
+        # no tag and no url - installing current release
+        km_tag=$(curl -L -s https://raw.githubusercontent.com/kontainapp/km/current/km-releases/current_release.txt)
+        echo "TAG=$km_tag" > custom.properties
+        echo "KONTAIN_RELEASE_URL=" >> custom.properties
+        echo "TRACE=yes" >> custom.properties
+        custom_config=true
     fi
-
 }
 
 for arg in "$@"

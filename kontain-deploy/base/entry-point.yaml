@@ -27,28 +27,19 @@ data:
 
     [ "$TRACE" ] && set -x
 
-    # preserve nodes resolve.conf and use one from pod while in chroot
-    cp ${ROOT_MOUNT_DIR}/etc/resolv.conf ${ROOT_MOUNT_DIR}/etc/resolv.conf.orig
-    cat /etc/resolv.conf > ${ROOT_MOUNT_DIR}/etc/resolv.conf
-
-    chroot ${ROOT_MOUNT_DIR} /bin/bash -c /scripts-lib/pre-install.sh
-
-    # echo "Install Kontain Runtime Artifacts (KM & KRUN)"
-    chroot ${ROOT_MOUNT_DIR} /bin/bash -c /scripts-lib/kontain-install-artifacts.sh
-
-    echo "Configure Runtime"
-    chroot ${ROOT_MOUNT_DIR} /bin/bash -c /scripts-lib/runtime-config.sh
-
-    echo "Configure KVM/KKM"
-    ${ROOT_MOUNT_DIR}/scripts-lib/kvm-kkm-install.sh
-
-    # restart whatever services are needed. It may use chroot inside as needed
-    ${ROOT_MOUNT_DIR}/scripts-lib/runtime-restart.sh
-
-    # restore resolve.conf after completing chroot 
-    cp ${ROOT_MOUNT_DIR}/etc/resolv.conf.orig ${ROOT_MOUNT_DIR}/etc/resolv.conf
-
-    # Now update node's label to make it available to kontain deployments
+    # we need jq to read node info
+    if [ ! chroot ${ROOT_MOUNT_DIR} which jq]; then 
+      if [ -f ${ROOT_MOUNT_DIR}/usr/bin/dnf ]; then
+        chroot ${ROOT_MOUNT_DIR} dnf install jq
+      elif [ -f ${ROOT_MOUNT_DIR}/usr/bin/apt ]; then
+        chroot ${ROOT_MOUNT_DIR} apt-get install jq -y 
+      elif [ -f ${ROOT_MOUNT_DIR}/usr/bin/yum ]; then
+        chroot ${ROOT_MOUNT_DIR} yum install jq
+      else
+        "Cannot install necessary tools"
+        exit 1
+      fi
+    fi
 
     # Point to the internal API server hostname
     APISERVER=https://kubernetes.default.svc
@@ -68,16 +59,46 @@ data:
     # my node name
     echo "MY NODE NAME = $MY_NODE_NAME"
 
-    curl --cacert ${CACERT} --header "Authorization: Bearer ${TOKEN}" -k -v \
-      -H "Accept: application/json" \
-      -XPATCH -d '{"metadata":{"labels":{"sandbox":"kontain"}}}' \
-      -H "Content-Type: application/merge-patch+json" \
-      ${APISERVER}/api/v1/nodes/${MY_NODE_NAME} > out.json
+    # check if current node does not have sandbox=kontain label
+    if [ ! $(curl --header "Authorization: Bearer ${TOKEN}" --insecure \
+      ${APISERVER}/api/v1/nodes/${MY_NODE_NAME} | chroot /root jq -r '.metadata.labels.sandbox') = 'kontain' ]; then 
 
-    if ! grep --quiet '"sandbox": "kontain"' out.json ; then 
-      echo "Node labeling failed. Make sure your kubernetes service account has sufficient permissions"
-      cat out.json
-      exit 1
+      # do full install 
+
+      # preserve nodes resolve.conf and use one from pod while in chroot
+      cp ${ROOT_MOUNT_DIR}/etc/resolv.conf ${ROOT_MOUNT_DIR}/etc/resolv.conf.orig
+      cat /etc/resolv.conf > ${ROOT_MOUNT_DIR}/etc/resolv.conf
+
+      chroot ${ROOT_MOUNT_DIR} /bin/bash -c /scripts-lib/pre-install.sh
+
+      # echo "Install Kontain Runtime Artifacts (KM & KRUN)"
+      chroot ${ROOT_MOUNT_DIR} /bin/bash -c /scripts-lib/kontain-install-artifacts.sh
+
+      echo "Configure Runtime"
+      chroot ${ROOT_MOUNT_DIR} /bin/bash -c /scripts-lib/runtime-config.sh
+
+      echo "Configure KVM/KKM"
+      ${ROOT_MOUNT_DIR}/scripts-lib/kvm-kkm-install.sh
+
+      # restart whatever services are needed. It may use chroot inside as needed
+      ${ROOT_MOUNT_DIR}/scripts-lib/runtime-restart.sh
+
+      # restore resolve.conf after completing chroot 
+      cp ${ROOT_MOUNT_DIR}/etc/resolv.conf.orig ${ROOT_MOUNT_DIR}/etc/resolv.conf
+
+      # Now update node's label to make it available to kontain deployments
+
+      curl --cacert ${CACERT} --header "Authorization: Bearer ${TOKEN}" -k -v \
+        -H "Accept: application/json" \
+        -XPATCH -d '{"metadata":{"labels":{"sandbox":"kontain"}}}' \
+        -H "Content-Type: application/merge-patch+json" \
+        ${APISERVER}/api/v1/nodes/${MY_NODE_NAME} > out.json
+
+      if ! grep --quiet '"sandbox": "kontain"' out.json ; then 
+        echo "Node labeling failed. Make sure your kubernetes service account has sufficient permissions"
+        cat out.json
+        exit 1
+      fi
     fi
 
     echo "kontain-init completed"
