@@ -28,7 +28,7 @@ data:
     [ "$TRACE" ] && set -x
 
     # we need jq to read node info
-    if [ ! chroot ${ROOT_MOUNT_DIR} which jq]; then 
+    if [ ! chroot ${ROOT_MOUNT_DIR} which jq ]; then 
       if [ -f ${ROOT_MOUNT_DIR}/usr/bin/dnf ]; then
         chroot ${ROOT_MOUNT_DIR} dnf install jq
       elif [ -f ${ROOT_MOUNT_DIR}/usr/bin/apt ]; then
